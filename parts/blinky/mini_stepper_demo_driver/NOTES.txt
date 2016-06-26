@@ -1,0 +1,120 @@
+http://smile.amazon.com/USPRO-Stepper-28BYJ-48-4-Phase-ULN2003/dp/B00JB22IQC/ref=pd_cp_422_1?ie=UTF8&refRID=09MSEVBKVP01JWGQC2WT
+
+http://www.bajdi.com/joystick-and-2-28ybj-48-stepper-motors/
+
+Each coil is about 100mA draw, for 200mA total.
+64 steps per internal revolution, but it's geared way down, 
+to approximately 2048 steps per output revolution.
+
+
+CAD dimensions:
+Output shaft:
+	4.91mm dia
+	2.91mm between flats
+	5.9mm flat height
+	8.24mm tip to boss start
+
+Output boss:
+	9.15mm diameter cylinder
+	1.1mm boss height above face
+	1.35mm from boss rim to body rim
+	-> 8.12mm from body center to boss center
+
+Body:
+	28.1mm body diameter
+	19.3mm body height
+	18.1mm back wiremount width
+	3.1mm back wiremount additional radius
+	-> 17.15mm wiremount back radius
+
+Mount:
+	4.11mm dia mounting ear holes
+	7mm dia outside ears
+	41.91mm outside to outside ear
+	30.81mm inside to inside ear
+	-> 17.45mm body center to ear center
+
+
+
+
+To find the actual steps per rev, hot glued a mirror to the output shaft, and bounced a laser off it.  There's a ton of backlash.  Every 4th half-step doesn't shift the output position.
+
+2037 steps/rev?
+
+Align at:
+1
+2038
+4074
+6112
+8149-50
+10187
+12228
+
+Dropped maxsteps from 4K to 2K:
+1
+2038
+4080
+6116
+
+Dropped accel to 50:
+1
+2039
+4077
+6114
+8149
+10187
+12223
+(lost steps on return)
+
+Dropped maxsteps from 2K to 1K:
+1
+2039
+4074
+6112
+8150
+10189
+12227
+(STILL loses steps on return!)
+
+Dropped maxsteps from 1K to 600:
+0
+2038
+4076
+
+8156
+
+12233
+back to 0 OK.
+
+Backlash is equivalent to about 20 steps.
+
+
+http://forum.arduino.cc/index.php?topic=71964.15
+Counted teeth in gearbox to get
+25792/405 = 63.68395
+25792/405*32 =  2037.88641975309
+
+12227/6 =  2037.83333
+
+
+
+
+http://www.airspayce.com/mikem/arduino/AccelStepper/
+http://www.embedded.com/design/mcus-processors-and-socs/4006438/Generate-stepper-motor-speed-profiles-in-real-time
+
+
+---------------
+Plugged directly down into Arduino Uno's pins 8-11, the appropriate startup is:
+AccelStepper stepper(AccelStepper::HALF4WIRE, 8,10,9,11);
+
+
+
+Driven from 12V (lithium 3S), the stepper gets wickedly hot (approx 140F), and draws half an amp, but this works reliably:
+     stepper.setMaxSpeed(3000.0);  stepper.setAcceleration(100000.0);
+
+Driven from 8V (lithium 2S), draw is 0.3 amp, and the stepper only hits 110F (toasty).
+     stepper.setMaxSpeed(3000.0);  stepper.setAcceleration(100000.0);
+
+On a 5Ah lipo, running at 8V for an hour only drops the lipo by 0.2V (maybe 10% of full charge).
+
+

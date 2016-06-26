@@ -1,0 +1,28 @@
+Idea is the thing sits on the end of the Arduino Mega, occupying analog A8-15 (for battery & motor voltage monitoring) and the last few digital pins.
+
+For monitoring voltages up to 24.8VDC from a 4.5V microcontroller, I need a voltage divider to ground.  I have a bunch of big 2Kohm and 348ohm surface mount resistors, which would give me up to 25.8VDC monitoring capability, while burning only 10mA of static current.  These surface mounts are only 3mm/0.11" wide, so they should be easy to fit.
+
+
+2014-03-01: Milled prototype board, and soldered it up.
+
+
+I needed to hack in "pinMode(p,INPUT_PULLUP)" support for Firmata (hardcoded, but seems to basically work).  Weirdly, you can't seem to digitalWrite in INPUT_PULLUP mode.
+
+For the encoder wheel, the blue/green lines show up as digital pins 53 and 50.
+The orange/brown lines should thus be digital pins 51 and 52.
+
+
+
+It's tempting to switch the analog inputs over to RJ-45, like the digitals.
+
+Analog via 2K:
+	- Vin 132
+	- Gnd 0
+	- 3.3v rail 97-103 (implying total range is about 33v)
+	- Aref 149-150
+The Mega can call analogReference(INTERNAL1V1) for a 1.1v internally generated reference (and hence better millivolt accuracy).
+
+-----------------------------
+Version 2:
+
+

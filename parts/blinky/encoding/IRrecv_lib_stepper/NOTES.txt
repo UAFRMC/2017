@@ -1,0 +1,27 @@
+
+Stepper + blinky receiver
+2mm gap blinder black PLA
+Arduino nano emitter & detector
+
+Stepper safe zone is about 100 to 3850.
+
+Taking individual jumps of size 100 gives a cycle time of 30 seconds (!), way too slow.  And we seem to miss IR pulses during the jump.
+Taking steps of size 10 takes over a minute per cycle.
+
+
+Multipath via big shiny objects like laptop screen is definitely a thing.
+
+
+Overriding AccelStepper::step and adding an IR probe seems to work well.  That nest of virtual functions is not at all high performance anyway.
+
+Blasting out one 8-bit message with a delay of 1ms is about one message every 3-4 steps.
+With the wide 2mm blinder gap, message receive window seems to be about 30-40 steps, so we get about 10 messages.
+
+Backlash is big--average received step is:
+	1450-3 on downhill
+	1488-90 on uphill
+	Average shift is 33.8 steps, so split difference at 17 steps in each direction.
+Standard deviation is 2.3 or 1.6 (down)
+Worst case over 500 runs is +-5 (!).
+
+

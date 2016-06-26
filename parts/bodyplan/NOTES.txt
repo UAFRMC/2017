@@ -1,0 +1,40 @@
+Robot driving coordinate system:
+X: robot's left and right, robot right +x
+Y: robot's forward and backward, robot forward +y
+Z: robot's up and down, up +z
+
+Fabrication coordinate system:
+Y=0 is back of bottom steel tubing
+
+Gearboxes:
+	Diameter 9cm at output gear
+	Total height 10.5cm
+	axle to motor max: 10.5cm
+
+Bottom frame:
+	Y=0 is back end of tube
+	Y=2.25 inch is axle pivot hole
+	Y=4.75 inch is start of back drive motor mount
+	Y=7.125 is start of back electronics box upright 
+		21.75" tall
+	Y=15.5 is centerline of ski mount
+	  total of   2.875" between inner holes
+	  total of   4.5" between outer holes
+	  ski mount is 6 inches long
+
+	Y=18.5 is start of up/down linear mount
+		1.5" tall to pivot point
+	Y=22.75 is start of front electronics box upright
+	Y=25.25 is start of front drive motor mount
+	Y=29.125 is front end of tube
+
+Mining head:
+	Back support is at 45 degrees to vertical in neutral configuration (linear actuators at 12" center to center)
+		Back pivot to mining head is 19"
+		Back pivot to linears is 20"
+	Mining head is at 60 degrees to vertical in neutral
+		From bottom of mount:
+		Runs 5.25" up to mine drive axle
+		Runs 19.25" down to mine idler axle
+
+Linear actuators: max length 16" axle to axle	

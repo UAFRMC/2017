@@ -1,0 +1,30 @@
+A: away team    B: bridge
+
+============================================================
+Startup
+============================================================
+(A) Router Plug-in
+	(B) Pilot has IP
+(A) Marker Setup
+(A) Align Hooks
+(A) Battery Reset
+(A) Arduino Cable
+(A) Laptop Open
+(A) Safety Off
+(A) Onboard Network
+	(B) SSH
+	(B) Start backend
+	(B) Telemetry
+	(B) Drive mode
+(A)//Webcam Focus
+(A)//Webcam Direction
+(A) Close Laptop
+
+============================================================
+End
+============================================================
+(A)Safety On
+(A)Run "off"
+(A)Wh Reading
+(A)Battery Unplug
+(A)Cleanup

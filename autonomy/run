@@ -1,0 +1,23 @@
+#!/bin/sh
+#  Start up robot camera and backend programs.
+
+# Kill old ones first
+killall -q camera backend
+
+#Over SSH, still use local screen
+export DISPLAY=:0 
+
+now=`date +'%F_%T'`
+
+# Start in this script's directory:
+cd `dirname $0`
+
+(
+	cd aruco/viewer; 
+	mv vidcaps "vidcaps.$now"
+	mkdir vidcaps
+	./camera > "log.camera.$now"
+) &
+(cd backend; ./backend > "log.backend.$now") &
+echo "Backend and camera running."
+
