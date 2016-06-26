@@ -1,24 +1,28 @@
 This is the public repo for UAF's NASA Robot Mining Contest team,
 Aurora Robotics.
-This is the firmware for UAF's entry in the NASA Robot Mining Competition.
+This is the firmware and control stack for UAF's entry in the NASA Robot Mining Competition.
 
 Public access:
-	git clone http://projects.cs.uaf.edu/robotmining
+	git clone https://github.com/UAFRMC/2017
 
-Ask Dr. Lawlor to get write access!
+Ask Mike or Dr. Lawlor to get write access!
 
 
+
+
+
+
+------------- 2015 notes:
 Laptop battery power check:
 	cat /sys/class/power_supply/BATX/charge_*
 The first two are charge values for full; the last is current charge.
 
 
--------------
 As-built storage bucket dimensions:
   17.75 inch * 17 inch * 3.5 inch = 17.3 liters -> 17Kg at 1 Kg/L density (fluffed)
 
 
-----------
+---------- 2014 notes:
 New 2014-05 board:
 
 Power plug:
