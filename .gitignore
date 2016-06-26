@@ -1,0 +1,14 @@
+*~
+*.log
+*.bin
+*.o
+/autonomy*/aruco/aruco-1.2.4
+/autonomy*/backend/backend
+/autonomy*/frontend/frontend
+/autonomy*/frontend/frontend_msl
+/autonomy*/aruco/viewer/camera
+/autonomy*/aruco/viewer/log
+/autonomy*/aruco/viewer/vidcap.jpg
+/autonomy*/aruco/viewer/vidcaps/
+/autonomy*/backend/log.txt
+/autonomy*/frontend/log.txt
