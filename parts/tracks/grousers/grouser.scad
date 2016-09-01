@@ -2,8 +2,7 @@
  50mm spacing track grouser, with UAF logo.
 */
 
-$fa=4;
-$fs=0.1;
+$fa=4; $fs=0.1; // for smooth final result
 
 centerline=25;
 
@@ -23,21 +22,24 @@ sidez()
 
 }
 
-panheadz=4;
+panheadz=3.5;
 panheadd=12;
-overallz=panheadz+3;
+overallz=panheadz+2;
 difference() {
-	lozenge(40,overallz);
+	lozenge(33,overallz);
 	
+	// Inside cavity for bolt heads
 	translate([0,0,overallz+0.1]) scale([1,1,-1])
 		lozenge(panheadd+2*panheadz,panheadz);
 	
+	
+	// Thru holes for bolts:
 	translate([0,0,-0.1])
-	sidez() cylinder(d=5.3,h=overallz);
+	sidez() cylinder(d=5.7,h=overallz);
 }
 
 
-linear_extrude(height=overallz,convexity=10)
-	scale([1,1.6,1])
+linear_extrude(height=overallz-0.8,convexity=10)
+	scale([1,1.4,1])
 	text("UAF",font="Arial Black",size=13,halign="center",valign="center");
 
