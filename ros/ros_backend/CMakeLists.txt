@@ -6,6 +6,7 @@ project(ros_backend)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  serial
 )
 
 ## System dependencies are found with CMake's conventions
@@ -98,7 +99,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+  INCLUDE_DIRS include
 #  LIBRARIES ros_backend
 #  CATKIN_DEPENDS roscpp
 #  DEPENDS system_lib
@@ -110,7 +111,7 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-# include_directories(include)
+include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
 )
@@ -126,16 +127,16 @@ include_directories(
 # add_dependencies(ros_backend ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-# add_executable(ros_backend_node src/ros_backend_node.cpp)
+add_executable(ros_backend_node src/ros_backend_node.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(ros_backend_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(ros_backend_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(ros_backend_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(ros_backend_node
+  ${catkin_LIBRARIES}
+)
 
 #############
 ## Install ##
