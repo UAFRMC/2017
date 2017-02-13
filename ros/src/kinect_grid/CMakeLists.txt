@@ -1,12 +1,13 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(ros_backend)
+project(kinect_grid)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  nav_msgs
   roscpp
-  serial
+  std_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -66,7 +67,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
+#   std_msgs
 # )
 
 ################################################
@@ -100,8 +101,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-#  LIBRARIES ros_backend
-#  CATKIN_DEPENDS roscpp
+#  LIBRARIES kinect_grid
+#  CATKIN_DEPENDS navmsgs roscpp std_msgs
 #  DEPENDS system_lib
 )
 
@@ -109,36 +110,38 @@ catkin_package(
 ## Build ##
 ###########
 
-#set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
-add_definitions(-std=c++11)
+#add_definitions(-std=c++11 -I/usr/local/include/libfreenect -L/usr/local/lib)
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  /usr/local/include/libfreenect
 )
 
+LINK_DIRECTORIES(/usr/local/lib)
+
 ## Declare a C++ library
-# add_library(ros_backend
-#   src/${PROJECT_NAME}/ros_backend.cpp
+# add_library(kinect_grid
+#   src/${PROJECT_NAME}/kinect_grid.cpp
 # )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(ros_backend ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(kinect_grid ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-add_executable(ros_backend_node src/ros_backend_node.cpp)
+add_executable(kinect_grid_node src/kinect_grid_node.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(ros_backend_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(kinect_grid_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(ros_backend_node
-  ${catkin_LIBRARIES}
+target_link_libraries(kinect_grid_node
+  ${catkin_LIBRARIES} freenect pthread usb-1.0
 )
 
 #############
@@ -156,7 +159,7 @@ target_link_libraries(ros_backend_node
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS ros_backend ros_backend_node
+# install(TARGETS kinect_grid kinect_grid_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -181,7 +184,7 @@ target_link_libraries(ros_backend_node
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_ros_backend.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_kinect_grid.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
