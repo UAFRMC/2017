@@ -876,6 +876,7 @@ void robot_manager_t::update(void) {
 	else if (robot.state==state_backend_driver)
 	{ // set robot power from backend UI
 		robot.power=ui.power;
+		printf("Backend driver dump: %d\n",robot.power.dump);
 	}
 	else if (robot.state>=state_autonomy) { // autonomous mode!
 		autonomous_state();

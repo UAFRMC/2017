@@ -15,11 +15,19 @@ utterly broken prototype generation code in the Arduino IDE. */
 namespace aurora {
 
 // Hardware pin wiring (for Mega)
+// BTS_motor_t motor_M(10,11,200);
+// BTS_motor_t motor_D(2,3,255); //Bag rolling motor
+// BTS_motor_t motor_L(6,7,60);
+// BTS_motor_t motor_R(8,9,60);
+// BTS_motor_t motor_F(5,4,255); // 4,5,255);
+
+
+// Hardware pin wiring (for Mega)
 BTS_motor_t motor_M(10,11,200);
-BTS_motor_t motor_D(2,3,255); //Bag rolling motor
-BTS_motor_t motor_L(6,7,60);
-BTS_motor_t motor_R(8,9,60);
-BTS_motor_t motor_F(5,4,255); // 4,5,255);
+BTS_motor_t motor_D(12,13,255); //Bag rolling motor
+BTS_motor_t motor_L(8,9,60);
+BTS_motor_t motor_R(4,5,60);
+BTS_motor_t motor_F(6,7,255); // 4,5,255);
 
 // Call this function frequently--it's for minimum-latency operations
 void low_latency_ops();
