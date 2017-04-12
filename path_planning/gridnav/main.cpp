@@ -5,16 +5,15 @@
 
 int main() 
 {
-  float gridscale=0.1; // meters per grid cell
-  typedef gridnav::gridnavigator<38,74, 64, 15> navigator_t;
+  typedef gridnav::gridnavigator<38,74, 64, 10, 15> navigator_t;
   navigator_t navigator;
   typedef navigator_t::fposition fposition;
   
-  fposition start(20,50,50);
-  fposition target(19,10,16);
+  fposition start(200,500,0);
+  fposition target(190,50,90);
   
-  std::deque<fposition> plan=navigator.plan(start,target,true);
-  for (const fposition &p : plan)
+  navigator_t::planner plan(navigator,start,target,true);
+  for (const fposition &p : plan.path)
     std::cout<<"Plan position: "<<p<<"\n";
   
   return 0;
