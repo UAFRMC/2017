@@ -56,21 +56,26 @@ public:
 	location_reader vision_reader;
 
 	/** Update computer vision values */
-	void update_vision(const char *marker_path) {
-	/*
+	bool update_vision(const char *marker_path) {
 		if (vision_reader.updated(marker_path,vision)) {
 			if (vision.valid) {
-				if (fabs(vision.x)<2.5 && vision.y>-0.5 && vision.y<10.0) {
-					merged=vision; // <- HACK!  Always trusts camera, even if it's bouncing around.
+				if (fabs(vision.x)<2.5 && vision.y>-0.5 && vision.y<3.0) {
+					//merged=vision; // <- HACK!  Always trusts camera, even if it's bouncing around.
+					merged.x=vision.x;
+					merged.y=vision.y;
+					merged.z=vision.z;
+					merged.angle=vision.angle;
+					merged.confidence=0.8; // vision.confidence;
+					return true;
 				}
 				else {
 					robotPrintln("Ignoring vision X %.1f  Y %.1f	angle %.0f\n",
 						vision.x,vision.y,vision.angle);
 				}
 			}
-			merged.vidcap_count=vision.vidcap_count;
+			// merged.vidcap_count=vision.vidcap_count;
 		}
-	*/
+		return false;
 	}
 
 
@@ -109,95 +114,7 @@ public:
 		merged.x=P.x; merged.y=P.y; merged.z=P.z;
 	}
 
-
-	// Update quadrics from blinkies
-	void update_blinky(robot_localization &loc);
-
-	// Draw blinkies
-	void draw_blinky();
-
-private:
-	// Record time of last blinky update
-	enum {n_blinky=robot_localization::n_blinky};
-	enum {n_xmit=robot_blinky_reports::n_xmit};
-	int last_update[n_blinky][n_xmit];  // change detector
-
-	osl::quadric emitter[n_xmit];
-	vec2 emitter_loc[n_xmit];
 };
-const double scale_to_quadric=0.01;
-const double scale_from_quadric=1.0/scale_to_quadric;
-void robot_locator::update_blinky(robot_localization &robot_loc) 
-{
-	robot_localization &loc=merged;
-	int nhit=0;
-	for (int blinky=0;blinky<n_blinky;blinky++) 
-	for (int xmit=0;xmit<n_xmit;xmit++) {
-		const robot_blinky_update &b=robot_loc.blinky[blinky].reports[xmit];
-		if (b.millitime!=0 && last_update[blinky][xmit]!=b.millitime) 
-		{ // new data!
-			vec2 start=loc.world_from_robot(vec2(robot_rt_blinky*(blinky*2-1),robot_fw_blinky));
-			vec2 dir=loc.dir_from_deg(b.angle_degrees());
-			vec2 perp(dir.y,-dir.x);
-			quadric plane(perp,start*scale_to_quadric);
-			quadric near=quadric::distance_from((start+dir*100.0)*scale_to_quadric);
-			near.scale(0.0001);
-			plane.add(near);
-			plane.scale(0.01);
-			emitter[xmit].add(plane);
-			nhit++;
-			
-			last_update[blinky][xmit]=b.millitime;
-		}
-	}
-
-	// Scale back the quadrics, and update center estimates
-	vec2 center(0.0);
-	quadric sumQ;
-	for (int xmit=0;xmit<n_xmit;xmit++) {
-		emitter[xmit].scale(0.99);
-		emitter_loc[xmit]=emitter[xmit].extremum()*scale_from_quadric;
-		center+=emitter_loc[xmit];
-		sumQ.add(emitter[xmit]);
-	}
-	center*=1.0/n_xmit;
-	//vec2 centerQ=sumQ.extremum();
-
-	robotPrintln("Location %.2f,%.2f angle %.2f\n",
-		loc.x,loc.y, loc.angle);
-	if (nhit>=1 && center.x==center.x) { // got data, update confidence
-		vec2 should(0.0,field_y_xmit);
-		vec2 shift=0.2*(should-center);
-		robotPrintln("Blinkyloc shift %.2f,%.2f from center %.2f,%.2f\n",
-			shift.x,shift.y, center.x,center.y);
-		loc.x+=shift.x;
-		loc.y+=shift.y;
-		
-		double emitter_ang=atan2(emitter_loc[2].y-emitter_loc[0].y,
-			emitter_loc[2].x-emitter_loc[0].x);
-		double angle_shift=emitter_ang*1.1;
-		loc.angle+=angle_shift;
-		//float right_dist=field_x_xmit;
-		//float L_conf=length(emitter_loc[0]-emitter_loc[1])
-		loc.confidence+=0.5;
-	}
-}
-
-
-// Draw blinkies
-void robot_locator::draw_blinky() {
-	glLineWidth(4.0);
-	glBegin(GL_LINES); 
-	for (int xmit=0;xmit<n_xmit;xmit++) {
-		vec2 cen=emitter[xmit].extremum()*scale_from_quadric;
-		float color[4]={0.0,0.0,0.0,0.5};
-		color[xmit%3]=0.5; 
-		glColor4fv(color); 
-		glVertex2dv(cen);
-		glVertex2dv(cen+20*vec2(1,1));
-	}
-	glEnd();
-}
 
 
 /**
@@ -229,6 +146,7 @@ public:
 		sim.loc.y=90.0;
 		sim.loc.x=((rand()%2)-0.5)*2.0*84.5;
 		sim.loc.angle=(rand()%6)*60;
+		sim.loc.confidence=1.0;
 
 	}
 
@@ -778,17 +696,13 @@ void robot_manager_t::update(void) {
 #endif
 
 // Check for an updated location from the "camera" vision application
-	locator.update_vision("../aruco/viewer/marker.bin");
-
-	robot.loc=locator.merged; // copy out robot location
-
-	if (true /* location valid check? */ ) {
+	if (locator.update_vision("../aruco/viewer/marker.bin")) {
+  	robot.loc=locator.merged; // copy out robot location
 
 //		robotPrintln("Location: X %.1f   Y %.1f   angle %.0f  (%s)",
 //			bin.x,bin.y,bin.angle,bin.valid?"valid":"invalid");
 
-/*
-		if (false) 
+		if (true) 
 		{
 			robot_localization &bin=locator.merged;
 
@@ -807,7 +721,7 @@ void robot_manager_t::update(void) {
 			robot.loc.angle=bin.angle;
 			robot.loc.confidence=std::max(robot.loc.confidence+0.2,0.0);
 		}
-
+/*
 		static uint32_t last_vidcap=-1;
 		if (bin.vidcap_count!=last_vidcap) {
 			robotPrintln("Reading updated vidcap texture");
@@ -816,8 +730,7 @@ void robot_manager_t::update(void) {
 				0,video_texture_ID,
 				SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
 			last_vidcap=bin.vidcap_count;
-		}
-*/
+		}*/
 	}
 
 // Check for a command broadcast (briefly)
@@ -887,34 +800,6 @@ void robot_manager_t::update(void) {
 		robot.status.arduino=1; // pretend it's connected
 		robot.sensor.bucket=sim.bucket*(950-179)+179;
 		robot.sensor.Mcount=(int)sim.Mcount;
-
-		// Simulate blinky data:
-		int side=rand()%2;
-		int xmit=rand()%10;
-		if (xmit<3) { // saw a blinky this step
-			vec2 emit=vec2((xmit-1)*field_x_xmit,field_y_xmit);
-			vec2 blinky=robot.loc.world_from_robot(vec2((side*2-1)*robot_rt_blinky,robot_fw_blinky));
-			
-			float deg=robot.loc.deg_from_dir(normalize(emit-blinky));
-			bool blocked=false;
-			if (side==0) { if (deg>-10 && deg<110) blocked=true; }
-			if (side==1) { if (deg>-110 && deg<10) blocked=true; }
-			
-			if (!blocked) {
-				if (deg<0.0) deg+=360.0;
-				float steps=deg/360*robot_blinky_update::steps_per_rev-robot_blinky_update::steps_from_zero;
-				robot_blinky_update &b=robot.loc.blinky[side].reports[xmit];
-				b.millitime=rand()%1234;
-				b.side=side;
-				b.xmit=xmit;
-
-				int noise=50;
-				steps+=(rand()%(2*noise))-noise;
-				b.angle=(int)(steps+0.5);
-
-				b.many=2+(rand()%8);
-			}
-		}
 	} else { // real arduino
 		robot_sensors_arduino old_sensor=robot.sensor;
 		arduino.update(robot);
@@ -927,8 +812,6 @@ void robot_manager_t::update(void) {
 			fix_wrap256(robot.sensor.DR1count-old_sensor.DR1count)*drivecount2cm,
 			wheelbase);
 	}
-
-	locator.update_blinky(robot.loc);
 		
 
 // Send out telemetry
@@ -959,7 +842,7 @@ void robot_manager_t::update(void) {
 		blend(sim.loc,robot.loc,robot.loc.confidence*dt);
 	if (simulate_only) // make reality track sim
 	{
-		blend(robot.loc,sim.loc,0.1);
+		robot.loc=sim.loc; // blend(robot.loc,sim.loc,0.1);
 		if (fabs(sim.loc.angle)<40.0) // camera in view
 			robot.loc.confidence+=0.1;
 		else // camera not in view
@@ -989,7 +872,6 @@ void robot_manager_t::update(void) {
 */
 
 	robot_display(sim.loc,0.5);
-	locator.draw_blinky();
 }
 
 

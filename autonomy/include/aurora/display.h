@@ -148,8 +148,8 @@ void robot_display_setup(const robot_current &robot) {
 	/*
 	glBegin(GL_LINES); // to verify mouse position
 	glColor4f(0.0,0.6,0.0,1.0);
-	glVertex2dv(robotMouse_cm);
-	glVertex2dv(robotMouse_cm+vec2(10,20));
+	glVertex2fv(robotMouse_cm);
+	glVertex2fv(robotMouse_cm+vec2(10,20));
 	glEnd();
 	*/
 
@@ -184,8 +184,8 @@ void robot_display_setup(const robot_current &robot) {
 		color[xmit%3]=1.0;
 		glColor4fv(color);
 		vec2 start((xmit-1)*field_x_xmit,field_y_xmit);
-		glVertex2dv(start);
-		glVertex2dv(start+vec2(5.0,0.0));
+		glVertex2fv(start);
+		glVertex2fv(start+vec2(5.0,0.0));
 	}
 	glEnd();
 
@@ -197,9 +197,9 @@ void robot_display_setup(const robot_current &robot) {
 	vec2 dump_pivot=robot_draw+vec2(-10,0);
 	
 	glColor4f(0.0,0.0,0.0,1.0); // body (black)
-	glVertex2dv(robot_draw);
-	glVertex2dv(robot_draw+vec2(robot_draw_x,0));
-	glVertex2dv(robot_draw+vec2(0,robot_draw_y));
+	glVertex2fv(robot_draw);
+	glVertex2fv(robot_draw+vec2(robot_draw_x,0));
+	glVertex2fv(robot_draw+vec2(0,robot_draw_y));
 	
 	double dump_angle=-30.0*((robot.sensor.bucket-180.0)/(950.0-180.0))+10.0;
 	
@@ -207,11 +207,11 @@ void robot_display_setup(const robot_current &robot) {
 	vec2 mine_tip=dump_pivot + rotate(vec2(robot_draw_x*0.8,0),dump_angle);
 	
 	glColor4f(0.0,0.0,0.0,1.0); // body (black)
-	glVertex2dv(dump_pivot);
+	glVertex2fv(dump_pivot);
 	glColor4f(0.0,1.0,0.0,0.5); // Dump bin (green)
-	glVertex2dv(dump_tip);
+	glVertex2fv(dump_tip);
 	glColor4f(1.0,0.0,0.0,0.5); // Tip of mining head (red)
-	glVertex2dv(mine_tip);
+	glVertex2fv(mine_tip);
 	
 	// Graphical illustration of Mcount:
 	vec2 mine1=mine_tip;
@@ -219,9 +219,9 @@ void robot_display_setup(const robot_current &robot) {
 	float Mprogress=((robot.sensor.Mcount+119)%120)/120.0;
 	vec2 Mprog=mine1+Mprogress*(mine0-mine1);
 	glColor4f(1.0,0.0,0.0,1.0); 
-	glVertex2dv(Mprog);
-	glVertex2dv(Mprog+rotate(vec2(0,20),dump_angle));
-	glVertex2dv(Mprog+rotate(vec2(-20,0),dump_angle));
+	glVertex2fv(Mprog);
+	glVertex2fv(Mprog+rotate(vec2(0,20),dump_angle));
+	glVertex2fv(Mprog+rotate(vec2(-20,0),dump_angle));
 	glEnd();
 
 // Draw the current autonomy state
@@ -323,17 +323,17 @@ void robot_display(const robot_localization &loc,double alpha=1.0)
 	double d=1.0; // front wheel deploy?
 	
 	glColor4f(0.0,0.8*conf,0.0,alpha); // green center
-	glVertex2dv(C+0.5*F);
+	glVertex2fv(C+0.5*F);
 	
 	glColor4f(0.8*conf,0.0,0.0,alpha); // red front wheels
-	glVertex2dv(C-R+d*F);
+	glVertex2fv(C-R+d*F);
 	
 	glColor4f(0.0,0.0,0.0,alpha); // black back
-	glVertex2dv(C-R-F);
-	glVertex2dv(C+R-F);
+	glVertex2fv(C-R-F);
+	glVertex2fv(C+R-F);
 	
 	glColor4f(0.8*conf,0.0,0.0,alpha); // red front wheels
-	glVertex2dv(C+R+F);
+	glVertex2fv(C+R+F);
 	glEnd();
 	
 	glColor4f(1.0,1.0,1.0,1.0);
@@ -384,8 +384,8 @@ void robot_display(const robot_localization &loc,double alpha=1.0)
 		float color[4]={0.0,0.0,0.0,alpha};
 		color[h.xmit%3]=1.0; 
 		glColor4fv(color); 
-		glVertex2dv(h.start);
-		glVertex2dv(h.end);
+		glVertex2fv(h.start);
+		glVertex2fv(h.end);
 	}
 	glEnd();
 }

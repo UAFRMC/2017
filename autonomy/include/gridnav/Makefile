@@ -1,8 +1,9 @@
+OPTS=-O
 COMPILER=g++ -std=c++14
 
 DIRS=-I/usr/local/include -L/usr/local/lib -I../include
 
-SOIL_DIR=../include/SOIL
+SOIL_DIR=../../autonomy/include/SOIL
 SOIL=$(SOIL_DIR)/stb_image_aug.c $(SOIL_DIR)/SOIL.c
 
 ifeq ($(OS),Windows_NT)
@@ -18,12 +19,12 @@ else
 	endif
 endif
 
-CFLAGS=-O -Wall -Wno-deprecated-declarations -Wno-char-subscripts
+CFLAGS=$(OPTS) -Wall -Wno-deprecated-declarations -Wno-char-subscripts
 
-all: backend
+all: gridnav
 
-backend: main.cpp $(SOIL)
+gridnav: main.cpp $(SOIL)
 	$(COMPILER) $^ $(LIB) $(CFLAGS) $(DIRS) -o $@
 
 clean:
-	rm -f backend backend.exe
+	rm -f gridnav gridnav.exe 

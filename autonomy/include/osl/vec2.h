@@ -7,7 +7,7 @@
 #define __OSL_VEC2_H
 
 #include "vector2d.h"
-typedef osl::Vector2d vec2;
+typedef osl::Vector2f vec2;
 inline vec2 normalize(const vec2 &v) {return v/v.mag();}
 inline float dot(const vec2 &a,const vec2 &b) {return a.dot(b);}
 inline float length(const vec2 &a) {return a.mag();}
