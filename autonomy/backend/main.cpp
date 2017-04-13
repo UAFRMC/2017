@@ -8,6 +8,8 @@
 #include <iostream>
 #include <cmath>
 
+#include "gridnav/gridnav_RMC.h"
+
 #include "osl/quadric.h"
 #include "../firmware/robot.h"
 #include "aurora/robot.cpp"
@@ -130,6 +132,8 @@ public:
 	robot_command command; // last-received command
 	robot_comms comms; // network link to front end
 	robot_ui ui; // keyboard interface
+	
+	rmc_navigator navigator;
 
 	robot_serial arduino;
 
@@ -148,6 +152,9 @@ public:
 		sim.loc.angle=(rand()%6)*60;
 		sim.loc.confidence=1.0;
 
+    // Add a few random obstacles to show off path planning
+    for (int x=200;x<250;x++)
+      navigator.mark_obstacle(x,300,30);
 	}
 
 	// Do robot work.
@@ -799,7 +806,8 @@ void robot_manager_t::update(void) {
 	if (simulate_only) { // build fake arduino data
 		robot.status.arduino=1; // pretend it's connected
 		robot.sensor.bucket=sim.bucket*(950-179)+179;
-		robot.sensor.Mcount=(int)sim.Mcount;
+		robot.sensor.Mcount=0xff&(int)sim.Mcount;
+		robot.sensor.Rcount=0xffff&(int)sim.Rcount;
 	} else { // real arduino
 		robot_sensors_arduino old_sensor=robot.sensor;
 		arduino.update(robot);
@@ -872,6 +880,33 @@ void robot_manager_t::update(void) {
 */
 
 	robot_display(sim.loc,0.5);
+	
+// Show path planning
+  if (simulate_only) { //<- fixme: move path planning to dedicated thread, to avoid blocking
+    // Show path back to dump
+    vec2 shift(field_x_size/2.0,0.0);
+    vec2 target(0,40);
+    if (robot.state>=state_align_turnout && robot.state<state_drive_to_dump)
+      target=vec2(0.0,field_y_size-100); // target is mining area
+    
+    // Start position: robot's position
+    rmc_navigator::fposition fstart(robot.loc.x+shift.x,robot.loc.y+shift.y,90-robot.loc.angle);
+    // End position: at target
+    rmc_navigator::fposition ftarget(target.x+shift.x,target.y+shift.y,90);
+  
+    rmc_navigator::planner plan(navigator.navigator,fstart,ftarget,false);
+    glBegin(GL_LINE_STRIP);
+    for (const rmc_navigator::searchposition &p : plan.path)
+    {
+      //std::cout<<"Plan position: "<<p.pos<<" drive "<<p.drive<<"\n";
+      glColor3f(0.5f+0.5f*p.drive.forward,0.5f+0.5f*p.drive.turn,0.0f);
+      vec2 v=p.pos.v-shift;
+      glVertex2fv(v);
+    }
+    glEnd();
+  
+
+  }
 }
 
 

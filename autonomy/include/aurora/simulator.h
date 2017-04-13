@@ -29,6 +29,7 @@ public:
 	// Actuators:
 	double dump; // linear actuators, 0-1 range
 	double Mcount; // mining head counter
+	double Rcount; // roll motor
 	double bucket; // linear actuators, 0-1 range
 	robot_localization loc; // current location of robot
 	
@@ -36,6 +37,7 @@ public:
 		dump=0.0; // lowered
 		bucket=0.5; // lowered
 		Mcount=0;
+		Rcount=0;
 	}
 
 /* Coordinate systems */
@@ -100,6 +102,10 @@ public:
 		vec2 right=side[1]-side[0];
 		loc.angle=atan2(-right.y,right.x)*180.0/M_PI;
 	
+	// Update bag roll counter
+	  float Rcount_per_sec=300.0; // roll motor counts/sec at full speed
+  	Rcount+=dt*Rcount_per_sec*(power.roll-64.0)/64.0;
+  	
 	// Update mining head counter
 		float Mcount_per_sec=100.0; // mining head counts/sec at max speed
 		float Mpower=(power.mine-64.0)/64.0;
