@@ -1,3 +1,4 @@
+OPTS=-O
 COMPILER=g++ -std=c++14
 
 DIRS=-I/usr/local/include -L/usr/local/lib -I../include
@@ -18,7 +19,7 @@ else
 	endif
 endif
 
-CFLAGS=-O -Wall -Wno-deprecated-declarations -Wno-char-subscripts
+CFLAGS=$(OPTS) -Wall -Wno-deprecated-declarations -Wno-char-subscripts
 
 all: gridnav
 

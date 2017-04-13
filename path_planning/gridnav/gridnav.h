@@ -157,7 +157,7 @@ public:
     vec2 drive;
     
     // Nonzero bits here mark persistent obstacles
-    grid2D<unsigned char> obstacle;
+    grid2D<int> obstacle;
     
     // Nonzero bits here mark that we've visited this cell
     grid2D<unsigned char> visit;
@@ -180,7 +180,7 @@ public:
       s.obstacle.clear(0);
       s.visit.clear(0);
     }
-    obstacles.clear(' ');
+    obstacles.clear(OPEN);
     lastpath.clear(' ');
   }
 
@@ -189,7 +189,8 @@ public:
   //   x,y are relative to the robot origin.  a=clearance_height.
   typedef std::vector<gridposition> robot_grid_slice;
   
-  // Discretized grid version of robot geometry.
+  // Discretized grid version of robot geometry at each orientation.
+  //   Basically a mask for placing around obstacles.
   //   Build this once, at startup.
   class robot_grid_geometry {
   public:
@@ -202,9 +203,9 @@ public:
         if (verbose) std::cout<<"Robot geometry at grid angle "<<angle_to_degrees(ia)<<"\n";
         robot_grid_slice &robotslice=slice[ia];
         float ang=angle_to_radians(ia);
-        float c=cos(ang), s=sin(ang);
+        float delta_ang=angle_to_radians(ia+1)-ang;
         
-        enum {CHECK=2*ROBOTGRID}; // grid cells to search
+        enum {CHECK=ROBOTGRID}; // grid cells to search
 
         // Loop over grid cells relative to robot origin:
         // for (int y=-CHECK;y<=+CHECK;y++)
@@ -213,14 +214,17 @@ public:
 
             int height=OPEN;
             
-            // Check robot clearance height all through this grid cell:
-            for (double dy=-0.6;dy<=+0.6;dy+=0.125)
-            for (double dx=-0.6;dx<=+0.6;dx+=0.125) {
-              vec2 g(GRIDSIZE*(x+dx),GRIDSIZE*(y+dy)); // grid position
-              // rotate to robot coordinates
-              vec2 r( c*g.x + s*g.y,
-                     -s*g.x + c*g.y );
-              height=std::min(height,geo.clearance_height(r.x,r.y));
+            // Check robot clearance height through the rotations of this grid cell:
+            for (double rot=-1.0;rot<=+1.0;rot+=1.0) {
+              float c=cos(ang+0.5*delta_ang*rot), s=sin(ang+0.5*delta_ang*rot);
+              for (double dy=-0.5;dy<=+0.5;dy+=0.25)
+              for (double dx=-0.5;dx<=+0.5;dx+=0.25) {
+                vec2 g(GRIDSIZE*(x+dx),GRIDSIZE*(y+dy)); // grid position
+                // rotate to robot coordinates
+                vec2 r( c*g.x + s*g.y,
+                       -s*g.x + c*g.y );
+                height=std::min(height,geo.clearance_height(r.x,r.y));
+              }
             }
             
             char height_debug=' ';
@@ -241,21 +245,29 @@ public:
   };
   
   
-  // This grid stores all known obstacles (for debug, navigation uses the sliced versions)
-  grid2D<char> obstacles;
+  // This grid records all known obstacles on the field.
+  //   They're kept here to avoid redundant obstacle updates.
+  grid2D<int> obstacles;
   
-  // This grid stores the winning path
+  // This grid stores the winning path (for display)
   grid2D<char> lastpath;
   
   // Mark this obstacle location, xy in grid coordinates, as impassible for this robot.
   //  This can be called at startup, or at runtime for new obstacles.
   void mark_obstacle(int x,int y,int height, const robot_grid_geometry &robot) {
-    if (gridposition(x,y,0).valid()) obstacles.at(x,y)='0'+height;
+    if (gridposition(x,y,0).valid()) {
+      int &old=obstacles.at(x,y);
+      if (old<=height) return; // redundant obstacle
+      else old=height;
+    }
+    
+    // Mark where the robot would hit this obstacle in each orientation.
+    //   The corresponding robot center points are blocked.
     for (int ia=0;ia<GRIDA;ia++) {
       gridslice &navslice=slice[ia];
       const robot_grid_slice &robotslice=robot.slice[ia];
       for (gridposition g : robotslice) {
-        if (g.a<height) { // robot would hit this obstacle--mark center as impassible
+        if (g.a<height) { // robot would hit this obstacle
           gridposition hit(x-g.x, y-g.y, ia);
           if (hit.valid())
             navslice.obstacle.at(hit.x,hit.y)=height;
@@ -266,9 +278,8 @@ public:
   
   // Mark the edges of the grid as impassible for this robot
   void mark_edges(const robot_grid_geometry &robot) {
-    int boundary=10;
-    for (int y=-boundary;y<=GRIDY+boundary;y++)
-    for (int x=-boundary;x<=GRIDX+boundary;x++)
+    for (int y=-1;y<=GRIDY;y++)
+    for (int x=-1;x<=GRIDX;x++)
     {
       if (!gridposition(x,y,0).valid())
         mark_obstacle(x,y,99,robot);
@@ -322,7 +333,8 @@ public:
     double total_cost(void) const {
       double drive_dist=length(pos.v-target.v); // in grid cells
       double turn_ang=angle_dist(pos.a-target.a); // in discrete angle units
-      return cost + drive_dist + turn_ang*TURN_COST_TO_GRID_COST;
+      enum {TURN_AMPLIFY=1};
+      return cost + drive_dist + TURN_AMPLIFY*turn_ang*TURN_COST_TO_GRID_COST;
     }
     
     // Sort so we always grab the best search position first
@@ -354,9 +366,25 @@ public:
     pool_t pool; // safely stores our search positions
     
     // Add this search position to our priority queue
-    void add_search(double cost,const drive_t &drive,const fposition &origin,const searchposition *last) {
-      pool.emplace_back(cost,drive,origin,target,last);
-      search.push(pool.back());
+    void add_search(double cost,const drive_t &drive,const fposition &pos,const searchposition *last) {
+      // make sure we haven't already visited this point
+      gridposition g(pos);
+      if (g.valid())
+      {
+        gridslice &s=nav.slice[g.a];
+        unsigned char &visited=nav.slice[g.a].visit.at(g.x,g.y);
+        if (0==visited)
+        { // create data structure to hold this point
+          visited=1; // mark as visited
+          
+          // Check for obstacles in the way:
+          const unsigned char &obs=s.obstacle.at(g.x,g.y);
+          if (obs==0) {
+            pool.emplace_back(cost,drive,pos,target,last);
+            search.push(pool.back());
+          }
+        }
+      }
     }
     
   public:
@@ -385,31 +413,13 @@ public:
         
         if (verbose) std::cout<<"At "<<cur.pos<<" cost "<<cur.cost<<": ";
         
-        // Mark this cell as visited
-        gridposition icur(cur.pos);
-        if (!icur.valid()) {
+        // Find the grid location for this cell
+        gridposition gcur(cur.pos);
+        if (!gcur.valid()) {
           if (verbose) std::cout<<"out of bounds, skip it\n";
           continue; // out of bounds, don't bother
         }
-        gridslice &s=nav.slice[icur.a];
-        unsigned char &vis=s.visit.at(icur.x,icur.y);
-        if (vis==1) {
-          if (verbose) std::cout<<"already visited\n";
-          continue; // already visited here
-        }
-        vis=1; // mark as visited
-        
-        // Check for obstacles
-        const unsigned char &obs=s.obstacle.at(icur.x,icur.y);
-        if (obs!=0) {
-          if (verbose) std::cout<<"blocked by obstacle\n";
-          continue; // can't go this way, obstacle found
-        }
-        if (verbose) std::cout<<"pushing children\n";
-        
-        // Check if we're done:
-        gridposition gcur(cur.pos);
-        if (gcur.valid()) nav.lastpath.at(gcur.x,gcur.y)='.'; // checked
+        nav.lastpath.at(gcur.x,gcur.y)='.'; // checked
         if (gcur==gridposition(target)) 
         { // we're done!  Follow the chain of "last" pointers back to the origin.
           if (verbose) std::cout<<"Target reached!  Reverse path:\n";
@@ -429,10 +439,13 @@ public:
         }
         
         // Check all nearby cells
+        vec2 drivedir=nav.slice[gcur.a].drive;
         for (float drive=-1.0;drive<=+1.0;drive+=2.0) {
-          double distance=GRIDSIZE; // grid cell distance to drive per step
+          // Drive at least into the next grid cell:
+          double distance=1.01*GRIDSIZE/std::max(fabs(drivedir.x),fabs(drivedir.y)); 
+          
           double cost=cur.cost+distance;
-          fposition next(cur.pos.v+distance*drive*s.drive,cur.pos.a);
+          fposition next(cur.pos.v+distance*drive*drivedir,cur.pos.a);
           add_search(cost,drive_t(drive,0.0f),next,&cur);
         }
         for (float turn=-1.0;turn<=+1.0;turn+=2.0) {

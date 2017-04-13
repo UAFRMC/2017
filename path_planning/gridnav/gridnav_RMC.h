@@ -18,7 +18,7 @@ public:
   enum {GRIDSIZE=10}; // cm per grid cell
   enum {GRIDX=(378+GRIDSIZE-1)/GRIDSIZE}; // xy grid cells for field
   enum {GRIDY=(738+GRIDSIZE-1)/GRIDSIZE};
-  enum {GRIDA=90}; // angular slices around 360 degrees
+  enum {GRIDA=36}; // angular slices around 360 degrees
   enum {ROBOTSIZE=(150+GRIDSIZE-1)/GRIDSIZE};
 
   // Create the navigator and planner
