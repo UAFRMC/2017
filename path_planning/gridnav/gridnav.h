@@ -133,8 +133,10 @@ public:
         data[y][x]=clearvalue;
     }
     
+    // Dump values to the screen
     void print(void) {
-      for (int y=0;y<GRIDY;y++) {
+      // for (int y=0;y<GRIDY;y++) {
+      for (int y=GRIDY-1;y>=0;y-=2) {
         for (int x=0;x<GRIDX;x++) {
           std::cout<<data[y][x];
         }
@@ -278,17 +280,36 @@ public:
   // Convert discrete angles to grid cell equivalent.
   //   This scale factor is derived figuring the tip velocity of a turning robot.
   static constexpr double TURN_COST_TO_GRID_COST=((2.0*M_PI/GRIDA)*(ROBOTGRID*0.5));
+  
+  
+  // This class represents a driving command used during the path.
+  class drive_t {
+  public:
+    float forward; // -1 backwards, 0 stopped, 1 forwards
+    float turn; // -1 left, 0 straight, +1 right
+    drive_t(float f,float t) :forward(f), turn(t) {}
+    void operator+=(const drive_t &d) { forward+=d.forward; turn+=d.turn; }
+    bool operator==(const drive_t &d) const { return forward==d.forward && turn==d.turn; }
+    
+    friend std::ostream &operator<<(std::ostream &o,const drive_t &d) 
+    {
+      o.precision(3);
+      o<<" {forward "<<d.forward<<"  turn "<<d.turn<<" } ";
+      return o;
+    }
+  };
 
   // This class represents an intermediate position in a path search.
   class searchposition {
   public:
     double cost; // cost to get here
-    fposition p; // position of the robot at this point
+    drive_t drive;
+    fposition pos; // position of the robot at this point
     const fposition &target; // target of search (for A* cost)
     const searchposition *last; // preceding search position, or NULL if none.
     
-    searchposition(double cost_,const fposition &p_,const fposition &target_,const searchposition *last_)
-      :cost(cost_), p(p_), target(target_), last(last_)
+    searchposition(double cost_,const drive_t &drive_,const fposition &pos_,const fposition &target_,const searchposition *last_)
+      :cost(cost_), drive(drive_), pos(pos_), target(target_), last(last_)
     {}
     
     float angle_dist(float delta) const {
@@ -299,8 +320,8 @@ public:
     
     // Return the approximate cost to reach the target
     double total_cost(void) const {
-      double drive_dist=length(p.v-target.v); // in grid cells
-      double turn_ang=angle_dist(p.a-target.a); // in discrete angle units
+      double drive_dist=length(pos.v-target.v); // in grid cells
+      double turn_ang=angle_dist(pos.a-target.a); // in discrete angle units
       return cost + drive_dist + turn_ang*TURN_COST_TO_GRID_COST;
     }
     
@@ -320,27 +341,31 @@ public:
     // If true, print debug info to the console
     bool verbose;
     
+    
     // This is the active list of searched positions, sorted by distance to target.
-    std::priority_queue<std::reference_wrapper<searchposition>,
+    typedef std::priority_queue<std::reference_wrapper<searchposition>,
       std::vector< std::reference_wrapper<searchposition> >,
-      std::greater<searchposition> > search;
+      std::greater<searchposition> > search_t;
+    search_t search;
     
     // SUBTLE: to allow backtracking, we need to persistently store search positions.
     //  std::deque has the nice property of not invalidating references.
-    std::deque<searchposition> pool; // safely stores our search positions
+    typedef std::deque<searchposition> pool_t;
+    pool_t pool; // safely stores our search positions
     
     // Add this search position to our priority queue
-    void add_search(double cost,const fposition &origin,const searchposition *last) {
-      pool.emplace_back(cost,origin,target,last);
+    void add_search(double cost,const drive_t &drive,const fposition &origin,const searchposition *last) {
+      pool.emplace_back(cost,drive,origin,target,last);
       search.push(pool.back());
     }
     
   public:
-    // This bool marks if we found a path
+    // This bool marks that we found a good path.
+    //    false == "you can't get there from here"
     bool valid;
     
     // This is the sequence of steps from origin to target
-    std::deque<fposition> path;
+    std::deque<searchposition> path;
     
     planner(navigator_t &nav_,const fposition &origin_,const fposition &target_,bool verbose_) 
       :nav(nav_), target(target_), verbose(verbose_)
@@ -352,16 +377,16 @@ public:
       nav.lastpath.clear(' ');
       
       // Start search at origin
-      add_search(0.0,origin_,0);
+      add_search(0.0,drive_t(0.0f,0.0f),origin_,0);
     
       // Repeatedly visit positions with the cheapest net cost
       while (!search.empty()) {
         const searchposition &cur=search.top(); search.pop();
         
-        if (verbose) std::cout<<"At "<<cur.p<<" cost "<<cur.cost<<": ";
+        if (verbose) std::cout<<"At "<<cur.pos<<" cost "<<cur.cost<<": ";
         
         // Mark this cell as visited
-        gridposition icur(cur.p);
+        gridposition icur(cur.pos);
         if (!icur.valid()) {
           if (verbose) std::cout<<"out of bounds, skip it\n";
           continue; // out of bounds, don't bother
@@ -383,17 +408,22 @@ public:
         if (verbose) std::cout<<"pushing children\n";
         
         // Check if we're done:
-        gridposition gcur(cur.p);
-        if (gcur.valid()) nav.lastpath.at(gcur.x,gcur.y)='.';
+        gridposition gcur(cur.pos);
+        if (gcur.valid()) nav.lastpath.at(gcur.x,gcur.y)='.'; // checked
         if (gcur==gridposition(target)) 
         { // we're done!  Follow the chain of "last" pointers back to the origin.
           if (verbose) std::cout<<"Target reached!  Reverse path:\n";
           for (const searchposition *p=&cur;p!=NULL;p=p->last) {
-            path.push_front(p->p);
-            std::cout<<p->p<<"\n";
-            gridposition gpath(p->p);
-            if (gpath.valid()) nav.lastpath.at(gpath.x,gpath.y)='x';
+            path.push_front(*p);
+            if (verbose) std::cout<<p->pos<<"\n";
+            gridposition gpath(p->pos);
+            if (gpath.valid()) nav.lastpath.at(gpath.x,gpath.y)='#'; // on path
           }
+          
+          // Clean out the pool for next time
+          search=search_t();
+          pool=pool_t();
+          
           valid=true;
           return;
         }
@@ -402,13 +432,13 @@ public:
         for (float drive=-1.0;drive<=+1.0;drive+=2.0) {
           double distance=GRIDSIZE; // grid cell distance to drive per step
           double cost=cur.cost+distance;
-          fposition next(cur.p.v+distance*drive*s.drive,cur.p.a);
-          add_search(cost,next,&cur);
+          fposition next(cur.pos.v+distance*drive*s.drive,cur.pos.a);
+          add_search(cost,drive_t(drive,0.0f),next,&cur);
         }
         for (float turn=-1.0;turn<=+1.0;turn+=2.0) {
           double cost=cur.cost+GRIDSIZE*TURN_COST_TO_GRID_COST;
-          fposition next(cur.p.v,fmodplus(cur.p.a+turn,GRIDA)); // angles wrap around
-          add_search(cost,next,&cur);
+          fposition next(cur.pos.v,fmodplus(cur.pos.a+turn,GRIDA)); // angles wrap around
+          add_search(cost,drive_t(0.0f,turn),next,&cur);
         }
       }
       
