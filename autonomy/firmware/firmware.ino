@@ -24,7 +24,7 @@ namespace aurora {
 
 // Hardware pin wiring (for Mega)
 BTS_motor_t motor_M(10,11,200);
-BTS_motor_t motor_D(12,13,255); //Bag rolling motor
+BTS_motor_t motor_D(12,3,255); //Bag rolling motor
 BTS_motor_t motor_L(8,9,60);
 BTS_motor_t motor_R(4,5,60);
 BTS_motor_t motor_F(6,7,255); // 4,5,255);
@@ -60,7 +60,7 @@ public:
         last_read=milli;
         next_send=milli;
         is_connected=true; // got valid packet
-        digitalWrite(13,HIGH); // !!(milli&(1<<8))); // blink while getting good data
+        //digitalWrite(13,HIGH); // !!(milli&(1<<8))); // blink while getting good data
         return true;
       }
     }
@@ -70,7 +70,7 @@ public:
       pkt.write_packet(0,0,0); // send heartbeat ping packet
       is_connected=false;
 
-      digitalWrite(13,0); // LED off if disconnected
+      //digitalWrite(13,0); // LED off if disconnected
     }
     return false;
   }
@@ -269,8 +269,8 @@ void setup()
   aurora::BlinkyRport.begin(57600);
 
   // Our ONE debug LED!
-  pinMode(13,OUTPUT);
-  digitalWrite(13,LOW);
+  //pinMode(13,OUTPUT);
+  //digitalWrite(13,LOW);
 
   // BTS Enable Pin (Controls all pins)
 //  pinMode(bts_enable_pin,OUTPUT);
