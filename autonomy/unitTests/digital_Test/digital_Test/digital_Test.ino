@@ -6,32 +6,27 @@
 //02/26/2017
 //Public Domain  
 
-
-
+const int num_pins=6;
+int pins1[num_pins]={42,40,44,38,46,36};
+int pins2[num_pins]={48,34,50,32,52,30};
 
 void setup() {
   
-    pinMode(34,INPUT);
-    pinMode(36,INPUT);
-    pinMode(50,INPUT);
-    pinMode(52,INPUT);
+  for(int ii=0;ii<num_pins;++ii)
+    pinMode(pins1[ii],INPUT);
+  for(int ii=0;ii<num_pins;++ii)
+    pinMode(pins2[ii],INPUT);
 
   Serial.begin(9600);
 
 }
 
-int values[4];
-
 void loop() {
-
- values[0] = digitalRead(34);
- values[1] = digitalRead(36);
- values[2] = digitalRead(50);
- values[3] = digitalRead(52);
-for( int i=0; i<4; i++)
- {
-    Serial.print(values[i]);
- } 
+for( int ii=0;ii<num_pins;++ii)
+    Serial.print(digitalRead(pins1[ii]));
+    Serial.print(' ');
+for( int ii=0;ii<num_pins;++ii)
+    Serial.print(digitalRead(pins2[ii]));
  
  Serial.println();
 

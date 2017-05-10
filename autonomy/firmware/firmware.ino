@@ -85,18 +85,19 @@ CommunicationChannel PC(PCport);
 CommunicationChannel BlinkyL(BlinkyLport);
 CommunicationChannel BlinkyR(BlinkyRport);
 
-
+//const int encoder_pins[6]={48,32,50,30,34,52}; //bus 1-4
+const int encoder_pins[6]={42,32,44,36,40,46};  //bus 5-8 (32 should be 38)
 
 enum
 {
   NUM_AVERAGES=2
 };
-speed_controller_t<NUM_AVERAGES> encoder_M(4,0,0,A0,80,motor_M); // Mining head left side motor
-speed_controller_t<NUM_AVERAGES> encoder_R(4,0,0,A3,80,motor_D); // Encoder for roll motor 
-speed_controller_t<NUM_AVERAGES> encoder_DL1(4,0,0,A2,13,motor_L);  //Left front wheel encoder
-speed_controller_t<NUM_AVERAGES> encoder_DL2(4,0,0,A5,13,motor_L);  //Left back wheel encoder
-speed_controller_t<NUM_AVERAGES> encoder_DR1(4,0,0,A1,13,motor_R); //Right front wheel encoder
-speed_controller_t<NUM_AVERAGES> encoder_DR2(4,0,0,A4,13,motor_R);  //Right back wheel encoder
+speed_controller_t<NUM_AVERAGES> encoder_M(4,0,0,encoder_pins[0],80,motor_M); // Mining head left side motor
+speed_controller_t<NUM_AVERAGES> encoder_R(4,0,0,encoder_pins[1],80,motor_D); // Encoder for roll motor
+speed_controller_t<NUM_AVERAGES> encoder_DL1(4,0,0,encoder_pins[2],13,motor_L);  //Left front wheel encoder
+speed_controller_t<NUM_AVERAGES> encoder_DL2(4,0,0,encoder_pins[3],13,motor_L);  //Left back wheel encoder
+speed_controller_t<NUM_AVERAGES> encoder_DR1(4,0,0,encoder_pins[4],13,motor_R); //Right front wheel encoder
+speed_controller_t<NUM_AVERAGES> encoder_DR2(4,0,0,encoder_pins[5],13,motor_R);  //Right back wheel encoder
 
 
 
@@ -121,7 +122,7 @@ void read_sensors(void) {
   robot.sensor.battery=analogRead(A12); // 24V bus
   low_latency_ops();
   robot.sensor.stop=robot.sensor.battery<600;
-  
+
   robot.sensor.Mstall=encoder_M.stalled;
   robot.sensor.DRstall=encoder_DL1.stalled;
   robot.sensor.DLstall=encoder_DR1.stalled;
@@ -130,10 +131,10 @@ void read_sensors(void) {
 
 void set_direction(int power64, encoder_t &enc)
 {
-  //Update encoder direction 
+  //Update encoder direction
   if (power64>64) enc.last_dir=+1;
   if (power64<64) enc.last_dir=-1;
-  
+
 }
 // Match up motor power value with encoder
 void send_motor_power(int power64,BTS_motor_t &motor,encoder_t &enc) {
@@ -235,7 +236,7 @@ void low_latency_ops() {
   //Encoder for roll motor
   encoder_R.read();
   robot.sensor.Rcount=encoder_R.count_dir;
-  
+
 
   //Encoder stuff for left drive track
   encoder_DL1.read();
