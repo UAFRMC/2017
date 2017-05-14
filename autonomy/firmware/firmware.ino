@@ -85,6 +85,9 @@ CommunicationChannel PC(PCport);
 CommunicationChannel BlinkyL(BlinkyLport);
 CommunicationChannel BlinkyR(BlinkyRport);
 
+const int encoder_raw_pin_count=12;
+const int encoder_raw_pins[encoder_raw_pin_count]={48,34,50,32,52,30, 42,40,44,38,46,36};
+
 //const int encoder_pins[6]={48,32,50,30,34,52}; //bus 1-4
 const int encoder_pins[6]={42,32,44,36,40,46};  //bus 5-8 (32 should be 38)
 
@@ -99,6 +102,8 @@ speed_controller_t<NUM_AVERAGES> encoder_DL2(4,0,0,encoder_pins[3],13,motor_L); 
 speed_controller_t<NUM_AVERAGES> encoder_DR1(4,0,0,encoder_pins[4],13,motor_R); //Right front wheel encoder
 speed_controller_t<NUM_AVERAGES> encoder_DR2(4,0,0,encoder_pins[5],13,motor_R);  //Right back wheel encoder
 
+encoder_t limit_top(48);
+encoder_t limit_bottom(50);
 
 
 
@@ -126,6 +131,13 @@ void read_sensors(void) {
   robot.sensor.Mstall=encoder_M.stalled;
   robot.sensor.DRstall=encoder_DL1.stalled;
   robot.sensor.DLstall=encoder_DR1.stalled;
+  robot.sensor.limit_top=limit_top.count_mono;
+  robot.sensor.limit_bottom=limit_bottom.count_mono;
+  
+  
+  robot.sensor.encoder_raw=0;
+  for(int ii=0;ii<encoder_raw_pin_count;++ii)
+    robot.sensor.encoder_raw|=digitalRead(encoder_raw_pins[ii])<<ii;
 }
 
 
@@ -251,6 +263,9 @@ void low_latency_ops() {
 
   encoder_DR2.read();
   robot.sensor.DR2count=encoder_DR2.count_dir;
+  
+  limit_top.read();
+  limit_bottom.read();
 
   // Update latency counter
   unsigned int latency=milli-last_milli;

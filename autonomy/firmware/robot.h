@@ -156,6 +156,11 @@ public:
 	uint32_t DR2count:8; /// Encoder tick count for back right drive wheel
 
 	uint32_t Rcount:16; /// Encoder tick for bag roll motor
+
+        uint32_t limit_top:8;
+        uint32_t limit_bottom:8;
+        
+        uint32_t encoder_raw:16;
 };
 
 /** This class contains one "blinky" reading:
