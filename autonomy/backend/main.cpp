@@ -30,6 +30,7 @@
 #include "../aruco/viewer/location_binary.h"
 
 #include "aurora/simulator.h"
+#include <iostream>
 
 
 using osl::quadric;
@@ -37,6 +38,8 @@ using osl::quadric;
 bool simulate_only=false; // -sim flag
 bool nodrive=false; // -nodrive flag (for testing indoors)
 bool big_field=false; // -big flag
+int max_raise_encoder_value=278;
+short raise_encoder_offset=max_raise_encoder_value/2;
 
 /* Convert this unsigned char difference into a float difference */
 float fix_wrap256(unsigned char diff) {
@@ -132,7 +135,7 @@ public:
 	robot_command command; // last-received command
 	robot_comms comms; // network link to front end
 	robot_ui ui; // keyboard interface
-	
+
 	rmc_navigator navigator;
 
 	robot_serial arduino;
@@ -145,6 +148,8 @@ public:
 		memset(&robot,0,sizeof(robot));
 		memset(&telemetry,0,sizeof(telemetry));
 		memset(&command,0,sizeof(command));
+		robot.sensor.limit_top=1;
+		robot.sensor.limit_bottom=1;
 
 		// Start simulation in random real start location
 		sim.loc.y=90.0;
@@ -215,7 +220,7 @@ private:
 	bool tryMineMode(void) {
 		if (robot.sensor.bucket<head_bar_clear) {
 			robot.power.mine=100; // TUNE THIS!
-			robot.power.mineMode = true; // Start PID based mining  
+			robot.power.mineMode = true; // Start PID based mining
 			return true;
 		}
 		return false;
@@ -672,7 +677,7 @@ void robot_manager_t::autonomous_state()
 		enter_state(state_drive);
 	}
 
-	if (nodrive) 
+	if (nodrive)
 	{ // do not drive!  (except for state_drive)
 		robotPrintln("NODRIVE");
 		robot.power.left=robot.power.right=64;
@@ -709,7 +714,7 @@ void robot_manager_t::update(void) {
 //		robotPrintln("Location: X %.1f   Y %.1f   angle %.0f  (%s)",
 //			bin.x,bin.y,bin.angle,bin.valid?"valid":"invalid");
 
-		if (true) 
+		if (true)
 		{
 			robot_localization &bin=locator.merged;
 
@@ -802,7 +807,45 @@ void robot_manager_t::update(void) {
 		autonomous_state();
 	}
 
-// Send commands to Arduino
+	//Variables to determine if you can raise or lower storage thingy
+	bool can_raise_up=true;
+	bool can_raise_down=true;
+
+	short raise_encoder=robot.sensor.Rcount;
+
+	//Detect limit switches and reset encoder offset if needed
+	if(robot.sensor.limit_top%2==0)
+	{
+		can_raise_up=false;
+		raise_encoder_offset=max_raise_encoder_value-raise_encoder;
+	}
+	if(robot.sensor.limit_bottom%2==0)
+	{
+		can_raise_down=false;
+		raise_encoder_offset=-raise_encoder;
+	}
+
+	//Detect soft encoder limiters
+	if(raise_encoder+raise_encoder_offset>max_raise_encoder_value)
+		can_raise_up=false;
+	if(raise_encoder+raise_encoder_offset<0)
+		can_raise_down=false;
+
+	//FINDME!!!
+	static int last_val_debug=0;
+	if(raise_encoder+raise_encoder_offset!=last_val_debug)
+	{
+		std::cout<<"FINDME!!! "<<raise_encoder+raise_encoder_offset<<"\t"<<can_raise_up<<" "<<can_raise_down<<" M:"<<raise_encoder_offset<<std::endl;
+		last_val_debug=raise_encoder+raise_encoder_offset;
+	}
+
+	//Stop raise/lower if limit detected
+	if(robot.power.roll>64&&!can_raise_up)
+		robot.power.roll=64;
+	if(robot.power.roll<64&&!can_raise_down)
+		robot.power.roll=64;
+
+	// Send commands to Arduino
 	if (simulate_only) { // build fake arduino data
 		robot.status.arduino=1; // pretend it's connected
 		robot.sensor.bucket=sim.bucket*(950-179)+179;
@@ -820,7 +863,7 @@ void robot_manager_t::update(void) {
 			fix_wrap256(robot.sensor.DR1count-old_sensor.DR1count)*drivecount2cm,
 			wheelbase);
 	}
-		
+
 
 // Send out telemetry
 	static double last_send=0.0;
@@ -880,7 +923,7 @@ void robot_manager_t::update(void) {
 */
 
 	robot_display(sim.loc,0.5);
-	
+
 // Show path planning
   if (simulate_only) { //<- fixme: move path planning to dedicated thread, to avoid blocking
     // Show path back to dump
@@ -888,12 +931,12 @@ void robot_manager_t::update(void) {
     vec2 target(0,40);
     if (robot.state>=state_align_turnout && robot.state<state_drive_to_dump)
       target=vec2(0.0,field_y_size-100); // target is mining area
-    
+
     // Start position: robot's position
     rmc_navigator::fposition fstart(robot.loc.x+shift.x,robot.loc.y+shift.y,90-robot.loc.angle);
     // End position: at target
     rmc_navigator::fposition ftarget(target.x+shift.x,target.y+shift.y,90);
-  
+
     rmc_navigator::planner plan(navigator.navigator,fstart,ftarget,false);
     glBegin(GL_LINE_STRIP);
     for (const rmc_navigator::searchposition &p : plan.path)
@@ -904,7 +947,7 @@ void robot_manager_t::update(void) {
       glVertex2fv(v);
     }
     glEnd();
-  
+
 
   }
 }

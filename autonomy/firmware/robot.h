@@ -134,18 +134,19 @@ Raw sensor values go as bitfields, because many of them are 10-bit quantities:
 	- Arena positions in cm are 9-10 bits each (arena is 378x738cm)
 	- Blinky angle reports are about 9 bits each (500 samples per rotation)
 */
-class robot_sensors_arduino {
+class robot_sensors_arduino
+{
 public:
 	uint32_t battery:10; // raw A/D reading at top of battery stack (voltage = this*5*2000/384)
 	uint32_t bucket:10; // raw A/D value from dump bucket lift encoder
 	uint32_t latency:5; // Arduino control loop latency
 
-        uint32_t Mstall:1;
+  uint32_t Mstall:1;
 	uint32_t DLstall:1;
 	uint32_t DRstall:1;
 
 	uint32_t stop:1; ///< EMERGENCY STOP button engaged
-        uint32_t padding:3;
+  uint32_t padding:3;
 
 	uint32_t Mspeed:8; /// Current milliseconds per encoder tick for mining head left motor (255==stopped)
 	uint32_t Mcount:8; /// Encoder tick count for mining head left motor
@@ -157,10 +158,10 @@ public:
 
 	uint32_t Rcount:16; /// Encoder tick for bag roll motor
 
-        uint32_t limit_top:8;
-        uint32_t limit_bottom:8;
-        
-        uint32_t encoder_raw:16;
+  uint32_t limit_top:8;
+  uint32_t limit_bottom:8;
+  
+  uint32_t encoder_raw:16;
 };
 
 /** This class contains one "blinky" reading:

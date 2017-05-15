@@ -351,17 +351,16 @@ void robot_ui::update(int keys[],const robot_current &robot) {
             mine=-0.2;
             description+="  mine-\n";
         }
-     if(keys['f'])
-     {
-     	roll=+1;
-     	description+=" roll+\n";
-     }
-     if(keys['v'])
-     {
-     	roll=-1;
-     	description+=" roll-\n";
-     }
-
+	if(keys['f'])
+	{
+		roll=+1;
+		description+=" roll+\n";
+	 }
+	if(keys['v'])
+	{
+		roll=-1;
+		description+=" roll-\n";
+	}
 
 	left=limit(left,driveLimit);
 	right=limit(right,driveLimit);
