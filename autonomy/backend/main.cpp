@@ -38,8 +38,6 @@ using osl::quadric;
 bool simulate_only=false; // -sim flag
 bool nodrive=false; // -nodrive flag (for testing indoors)
 bool big_field=false; // -big flag
-int max_raise_encoder_value=278;
-short raise_encoder_offset=max_raise_encoder_value/2;
 
 /* Convert this unsigned char difference into a float difference */
 float fix_wrap256(unsigned char diff) {
@@ -811,33 +809,17 @@ void robot_manager_t::update(void) {
 	bool can_raise_up=true;
 	bool can_raise_down=true;
 
-	short raise_encoder=robot.sensor.Rcount;
+	//Detect soft encoder limiters
+	if(robot.sensor.Rcount>=arduino.Rmax)
+		can_raise_up=false;
+	if(robot.sensor.Rcount<=0)
+		can_raise_down=false;
 
 	//Detect limit switches and reset encoder offset if needed
 	if(robot.sensor.limit_top%2==0)
-	{
 		can_raise_up=false;
-		raise_encoder_offset=max_raise_encoder_value-raise_encoder;
-	}
 	if(robot.sensor.limit_bottom%2==0)
-	{
 		can_raise_down=false;
-		raise_encoder_offset=-raise_encoder;
-	}
-
-	//Detect soft encoder limiters
-	if(raise_encoder+raise_encoder_offset>max_raise_encoder_value)
-		can_raise_up=false;
-	if(raise_encoder+raise_encoder_offset<0)
-		can_raise_down=false;
-
-	//FINDME!!!
-	static int last_val_debug=0;
-	if(raise_encoder+raise_encoder_offset!=last_val_debug)
-	{
-		std::cout<<"FINDME!!! "<<raise_encoder+raise_encoder_offset<<"\t"<<can_raise_up<<" "<<can_raise_down<<" M:"<<raise_encoder_offset<<std::endl;
-		last_val_debug=raise_encoder+raise_encoder_offset;
-	}
 
 	//Stop raise/lower if limit detected
 	if(robot.power.roll>64&&!can_raise_up)
@@ -854,6 +836,19 @@ void robot_manager_t::update(void) {
 	} else { // real arduino
 		robot_sensors_arduino old_sensor=robot.sensor;
 		arduino.update(robot);
+
+		//Reset encoder offset if needed
+		if(robot.sensor.limit_top%2==0)
+		{
+			arduino.Rdiff+=arduino.Rmax-robot.sensor.Rcount;
+			robot.sensor.Rcount=arduino.Rmax;
+		}
+		if(robot.sensor.limit_bottom%2==0)
+		{
+			arduino.Rdiff-=robot.sensor.Rcount;
+			robot.sensor.Rcount=0;
+		}
+
 		float wheelbase=130.0; // cm between wheels (tracks)
 
 		float drivecount2cm=9*0.050/36*100.0; // cm of driving per wheel encoder tick, ==9 sprocket drive pegs at 50mm apart, 36 encoder counts per revolution
