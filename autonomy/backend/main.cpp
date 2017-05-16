@@ -336,8 +336,7 @@ vec2 dump_drive_loc(0,100);
 
 // Return true if the mining head is stalled (according to our sensors
 bool is_stalled(const robot_current &robot) {
-	// if (robot.sensor.mineMoving<100) return true;
-	return false; // not stalled
+	return robot.sensor.Mstall;
 }
 
 // Return true if onboard storage is full of material

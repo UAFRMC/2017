@@ -145,7 +145,7 @@ void robot_ui::update(int keys[],const robot_current &robot) {
 
 // Power limits:
 	float driveLimit=0.5;
-	float mineLimit=1.0;
+	float mineLimit=0.12;
 	float dumpLimit=1.0;
 	float rollLimit=0.5;
 
@@ -235,7 +235,7 @@ void robot_ui::update(int keys[],const robot_current &robot) {
 
 
 //Pilot warning messages:
-	
+
 	if(robot.sensor.Mstall)
 		description+="  MINING HEAD STALLED\n";
 	if(robot.sensor.DLstall)
@@ -345,6 +345,7 @@ void robot_ui::update(int keys[],const robot_current &robot) {
 	power.roll=toMotor(roll,rollLimit);
 
 	robotPrintln("Arduino Heartbeat: %d",robot.sensor.heartbeat);
+	robotPrintln("%s",description.c_str());
 	printf("Robot raw power: %d %d %d %d %d\n",
 		power.left, power.right, power.mine, power.dump, power.roll);
 }

@@ -11,6 +11,7 @@ public:
   BTS_motor_t& motor;
   pid_t<int16_t> pid;
   milli_t last_print;
+  milli_t last_power;
   milli_t times[AVERAGES];
   uint8_t times_ptr; // index into times array
   int16_t average_without_div; // average of times array
@@ -26,6 +27,7 @@ public:
     stalled=false;
     backwards=false;
     last_dir=0;
+    last_print=last_power=0;
   }
 
   virtual void change()
@@ -99,18 +101,11 @@ public:
     int32_t motor_value=64;
     milli_t since_last=milli-last_change;
 
-    /*if(since_last>target_time*10) { // really stalled!
+    if(last_power>last_change+500)
+    {
        stalled=true;
     }
-    else if(since_last>target_time*3)
-    {
-	motor_value=motor_kickstart_full;
-    }
-    else if(since_last>target_time*2) // not moving: KICKSTART gently at first
-    {
-		motor_value=motor_kickstart_gentle;
-    }
-    else*/
+    
     {
       milli_t real_average=average_without_div;
       int count=AVERAGES;
@@ -148,8 +143,8 @@ public:
     }
 */
 
-
-
+    if(motor_value!=64)
+      last_power=milli;
 
     if(backwards) //running in reverse
       return (128-motor_value);
