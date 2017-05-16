@@ -9,13 +9,13 @@ int main(int argc,const char *args[]) {
   file_ipc_link<osl::transform> tf_link(args[1]);
   osl::transform tf;
   while (true) {
-	if (tf_link.subscribe(tf)) {
-		//printf("\033[0;0f"); // seek to start of screen
-		printf("\033[2J"); // seek to (0,0) and clear screen
-		vec3_print("origin: ", tf.origin);
-		tf.basis.print();
-	}
-	sleep(0);
+	  if (tf_link.subscribe(tf)) {
+		  //printf("\033[0;0f"); // seek to start of screen
+		  printf("\033[2J"); // seek to (0,0) and clear screen
+		  vec3_print("origin: ", tf.origin);
+		  tf.basis.print();
+	  }
+	  usleep(10*1000);
   }
   
   return 0;
