@@ -277,6 +277,24 @@ void robot_display_setup(const robot_current &robot) {
 	robotPrintln("Roll motor encoder ticks %d", robot.sensor.Rcount);
 	robotPrintln("\"The Box\" limit ticks %d %d", robot.sensor.limit_top, robot.sensor.limit_bottom);
 
+
+	std::string box_status = "";
+
+	if(robot.sensor.Rcount <= box_raise_min)
+	{
+		box_status = "lowered";
+	}
+	else if(robot.sensor.Rcount >= box_raise_max)
+	{
+		box_status = "raised";
+	}
+	else
+	{
+		box_status = "in motion";
+	}
+	robotPrintln("\"The Box\" is %s", box_status.c_str());
+
+
 	std::string encoder_str("Encoder Raw ");
 	for(int ii=16-1;ii>=0;--ii)
 	{

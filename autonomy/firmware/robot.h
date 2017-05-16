@@ -53,7 +53,10 @@ enum {
 		head_bar_clear=320, //mining head will not drag on bar
 		// These 2 are used for speed control while aligning and releasing hooks
 		count_stop = 1, // encoder count to stop on
-		count_slow = 110 // run fast until you're here
+		count_slow = 110, // run fast until you're here
+    // These 2 are used to tell whether the box is at max or min height
+    box_raise_max = 278,
+    box_raise_min = 0
 	};
 /**
   This is a list of possible robot states.
@@ -156,7 +159,7 @@ public:
 	uint32_t DR1count:8; /// Encoder tick count for right drive wheel
 	uint32_t DR2count:8; /// Encoder tick count for back right drive wheel
 
-	uint32_t Rcount:16; /// Encoder tick for bag roll motor
+	int32_t Rcount:16; /// Encoder tick for bag roll motor
 
   uint32_t limit_top:8;
   uint32_t limit_bottom:8;

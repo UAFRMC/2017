@@ -17,11 +17,14 @@ public:
 	int _timeout;
 	void connect();
 	void update(robot_current &robot);
-	uint32_t Mcountdiff, DL1diff, DR1diff, DL2diff, DR2diff, Rdiff; // Deltas for encoders
+	uint32_t Mcountdiff, DL1diff, DR1diff, DL2diff, DR2diff;
+	const int16_t Rmax;
+	int16_t Rdiff; // Deltas for encoders
 
-	robot_serial() :pkt(Serial) {
+	robot_serial() :pkt(Serial),Rmax(278) {
 		_timeout=100; //< hack, to get connect at startup
-		Mcountdiff = DL1diff = DR1diff = DL2diff = DR2diff = Rdiff = 0;
+		Mcountdiff = DL1diff = DR1diff = DL2diff = DR2diff = 0;
+		Rdiff=Rmax/2;
 	}
 };
 
@@ -78,10 +81,11 @@ void robot_serial::update(robot_current &robot){
 				}
 				else
 				{
-					if(robot.power.mineEncoderReset!=0)
-					{ // user pressed key to zero out rollcount
-						Rdiff=-robot.sensor.Rcount;
-					}
+					//No longer needed since we added limit switches
+					//if(robot.power.mineEncoderReset!=0)
+					//{ // user pressed key to zero out rollcount
+					//	Rdiff=-robot.sensor.Rcount;
+					//}
 
 					// got valid sensor report: arduino is OK
 					robot.status.arduino=1;
@@ -109,7 +113,7 @@ void robot_serial::update(robot_current &robot){
 					const char *blinkdesc[4]={"A","B","C","K"};
 #define printblink(b) "blinky%s	%s	%d	%d	%d\n", \
 			b.side?"R":"L", blinkdesc[b.xmit], b.angle, b.many, b.millitime
-					
+
 					robotPrintln(printblink(b));
 
 					static FILE *fblink=fopen("blinky.log","a+");
@@ -143,6 +147,7 @@ void robot_serial::update(robot_current &robot){
 		DL1diff = robot.sensor.DL1count;
 		DL2diff = robot.sensor.DL2count;
 		DR1diff = robot.sensor.DR1count;
+		DR2diff = robot.sensor.DR2count;
 		DR2diff = robot.sensor.DR2count;
 		Rdiff = robot.sensor.Rcount;
 		connect();
