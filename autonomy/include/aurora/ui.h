@@ -317,7 +317,7 @@ void robot_ui::update(int keys[],const robot_current &robot) {
 	   power.mineMode=!power.mineMode;
         }
 	if (power.mineMode) {
-		mine=1.0;
+		mine=mineLimit;
 	}
 
 	if(keys['j'])
@@ -343,12 +343,12 @@ void robot_ui::update(int keys[],const robot_current &robot) {
         }
         if(keys[oglSpecialRight])
         {
-            mine=+0.2;
+            mine=+mineLimit;
             description+="  mine+\n";
         }
         if(keys[oglSpecialLeft])
         {
-            mine=-0.2;
+            mine=-mineLimit;
             description+="  mine-\n";
         }
 	if(keys['f'])
