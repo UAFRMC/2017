@@ -235,27 +235,7 @@ void robot_ui::update(int keys[],const robot_current &robot) {
 
 
 //Pilot warning messages:
-	if(robot.sensor.bucket > head_mine_start||robot.sensor.bucket > head_bar_clear)
-	{
-		description += "  DO NOT MINE:\n";
-	}
-	if(robot.sensor.bucket > head_mine_start)
-	{
-		 description += "  Head high\n";
-	}
-	if(robot.sensor.bucket > head_bar_clear)
-	{
-		description += "  Hits Bar\n";
-	}
-	if(robot.sensor.bucket > head_drive_safe)
-	{
-		description += "  DO NOT DRIVE: Head high\n";
-	}
-	if(robot.sensor.bucket < head_mine_dump)
-	{
-		description += "  DO NOT DUMP: Head low\n";
-		//description += '\n';
-	}
+	
 	if(robot.sensor.Mstall)
 		description+="  MINING HEAD STALLED\n";
 	if(robot.sensor.DLstall)
@@ -296,14 +276,6 @@ void robot_ui::update(int keys[],const robot_current &robot) {
 		description+="  BTS Motor Reset\n";
 
 
-        if(keys['0']) // zero out Mcount encoder (after lining up head)
-        {
-			power.mineEncoderReset=true;
-        }
-	else {
-			power.mineEncoderReset=false;
-	}
-
 	if(power.torqueControl!=0)
 		description+="  torque control\n";
 	else
@@ -334,12 +306,12 @@ void robot_ui::update(int keys[],const robot_current &robot) {
         if(keys[oglSpecialDown])
         {
             dump=-1;
-            description+="  dump-\n";
+            description+="  depth-\n";
         }
         if(keys[oglSpecialUp])
         {
             dump=+1;
-            description+="  dump+\n";
+            description+="  depth+\n";
         }
         if(keys[oglSpecialRight])
         {
@@ -372,6 +344,7 @@ void robot_ui::update(int keys[],const robot_current &robot) {
 	power.dump=toMotor(dump,dumpLimit);
 	power.roll=toMotor(roll,rollLimit);
 
+	robotPrintln("Arduino Heartbeat: %d",robot.sensor.heartbeat);
 	printf("Robot raw power: %d %d %d %d %d\n",
 		power.left, power.right, power.mine, power.dump, power.roll);
 }

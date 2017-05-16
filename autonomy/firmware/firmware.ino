@@ -133,6 +133,7 @@ void read_sensors(void) {
   robot.sensor.DLstall=encoder_DR1.stalled;
   robot.sensor.limit_top=limit_top.count_mono;
   robot.sensor.limit_bottom=limit_bottom.count_mono;
+  ++robot.sensor.heartbeat;
   
   
   robot.sensor.encoder_raw=0;

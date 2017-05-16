@@ -149,7 +149,7 @@ public:
 	uint32_t DRstall:1;
 
 	uint32_t stop:1; ///< EMERGENCY STOP button engaged
-  uint32_t padding:3;
+  uint32_t heartbeat:3;
 
 	uint32_t Mspeed:8; /// Current milliseconds per encoder tick for mining head left motor (255==stopped)
 	uint32_t Mcount:8; /// Encoder tick count for mining head left motor
