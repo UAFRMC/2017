@@ -70,6 +70,7 @@ public:
     }
     else if (target>=62 && target<65) {
       set_dir(0);
+      stalled=false; //No power,clear stall
       return 64;
     }
     else { // target > 64
@@ -105,6 +106,7 @@ public:
     {
        stalled=true;
     }
+    
     
     {
       milli_t real_average=average_without_div;

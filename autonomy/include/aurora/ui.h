@@ -27,6 +27,9 @@ public:
 	// Current floating-point power values:
 	float left, right, front, mine, dump, roll;
 
+	//UI stall states
+	bool Mstall; 
+
 	// Human-readable description of current state
 	std::string description;
 
@@ -176,6 +179,7 @@ void robot_ui::update(int keys[],const robot_current &robot) {
 
 	static bool joyDrive=false;
 	bool joyDone=false; // subtle:
+	
 
 
 /*  Fix: Uses only the left analog stick for driving the robot */
@@ -236,8 +240,8 @@ void robot_ui::update(int keys[],const robot_current &robot) {
 
 //Pilot warning messages:
 
-	if(robot.sensor.Mstall)
-		description+="  MINING HEAD STALLED\n";
+	if(Mstall)
+		description+="  MINING HEAD STALLED. RELEASE POWER\n";
 	if(robot.sensor.DLstall)
 		description+="  LEFT DRIVE STALLED\n";
 	if(robot.sensor.DRstall)
@@ -334,10 +338,16 @@ void robot_ui::update(int keys[],const robot_current &robot) {
 		description+=" roll-\n";
 	}
 
+	if(robot.sensor.Mstall && mine!=0)
+		Mstall=true;
+	else if(mine==0)
+		Mstall=false; // Reset UI stall if no mine command
+
 	left=limit(left,driveLimit);
 	right=limit(right,driveLimit);
 
-
+	if(Mstall)
+		mine=0; //Do not allow mining if UI stall is set
 	power.left=toMotor(left,driveLimit);
 	power.right=toMotor(right,driveLimit);
 	power.mine=toMotor(mine,mineLimit);
