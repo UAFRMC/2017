@@ -423,6 +423,7 @@ public:
 class kinectPixelWatcher {
 public:
 	kinect_depth_image &img;
+	osl::transform sensor_tf;
 	vec3 up;
 	kinectPixelWatcher(kinect_depth_image &img_,vec3 up_) 
 		:img(img_), up(normalize(up_)) 
@@ -454,11 +455,24 @@ int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug) const
 	if (raw>=KINECT_bad) return 0; // out of bounds
 
 	vec3 loc=img.loc(x,y); // meters
+	
 	debug.P=loc;
 	float toFloor=loc.dot(up); // m to floor
 	float m=loc.mag(); // m range
-	debug.b=0; // m*256; // Range, in meters
-	debug.r=toFloor*10.0*256; // Up, in 10cm wrap
+	
+	// Add 1 meter grid lines to everything:
+	const float grid_mod=100.0;
+	const float grid_width=10.0;
+	
+	vec3 global=sensor_tf.global_from_local(vec3(loc.x,loc.z,loc.y)*100.0); // to cm
+	bool in_gridline=false;
+	for (int axis=0;axis<3;axis++) 
+	  if (fmod(global[axis]+100.0*grid_mod,grid_mod)<grid_width)
+	    in_gridline=true;
+	debug.b=in_gridline?255:0; // draw global grid (coordinate system debug)
+	
+	
+	debug.r=toFloor*10.0*256; // Up vector, 10cm wrap
 
 	if ( m<min_distance || m>max_distance) return 0; // too close or far
 	if (toFloor<min_up || toFloor>max_up) return 1; // bad up vector distance
@@ -479,7 +493,7 @@ int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug) const
 	const float normal_Y_max=0.90; // surface normal Y component (above here is floor)
 	
 	if (dot(N,up)>normal_Y_max) {
-		debug.b=255;
+		debug.g=255; // show floor as paydirt, green
 		return 4; // that area looks driveable!
 	}
 	return 3;
@@ -493,7 +507,7 @@ void depth_cb(freenect_device *dev, void *v_depth, uint32_t timestamp)
 	// Grab latest vive localization
 	static osl::transform sensor_tf;
 	static file_ipc_link<osl::transform> sensor_link("sensor.tf");
-	//sensor_link.subscribe(sensor_tf);
+	sensor_link.subscribe(sensor_tf);
 
 	kinect_depth_image img(depth,KINECT_w,KINECT_h);
 	vec3 up(upVec.x,upVec.y,upVec.z); 
@@ -503,6 +517,7 @@ void depth_cb(freenect_device *dev, void *v_depth, uint32_t timestamp)
 	//up.z+=0.02; // correct weak back tilt
 	up=normalize(up);
 	kinectPixelWatcher watch(img,up);
+	watch.sensor_tf=sensor_tf;
 	
 	pthread_mutex_lock(&gl_backbuf_mutex);
 
@@ -513,11 +528,11 @@ void depth_cb(freenect_device *dev, void *v_depth, uint32_t timestamp)
 		int i=x+img.w*y;
 
 		kinectPixelWatcher::debug_t debug;
-		debug.r=debug.b=0;
+		debug.r=debug.g=debug.b=0;
 		int pix=watch.classify_pixel(x,y,debug);
 
 		depth_mid[3*i+0]=debug.r;
-		depth_mid[3*i+1]=pix*2;
+		depth_mid[3*i+1]=debug.g;
 		depth_mid[3*i+2]=debug.b;
 	}
 	got_depth++;
