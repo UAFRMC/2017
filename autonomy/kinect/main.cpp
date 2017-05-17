@@ -45,6 +45,7 @@
 
 #include "osl/transform.h"
 #include "osl/file_ipc.h"
+#include "bitgrid_RMC.h"
 
 #include "libfreenect.h"
 
@@ -429,24 +430,27 @@ public:
 		:img(img_), up(normalize(up_)) 
 	{}
 	
+	// Gridded outputs:
+	bitgrid driveable; // we can see this area is driveable (drive tracks here).  Even terrain.
+	bitgrid straddle; // we can see this object can be straddled (drive over it between tracks).  Uneven terrain.
+	bitgrid obstacle; // we can see this object is too high to be straddled.  High obstacle.
+	
 	// Debug outputs for this pixel.
 	class debug_t {
 	public:
 		unsigned char r,g,b; // onscreen color
-		vec3 N; // unit surface normal (Kinect coords, estimated)
-		vec3 P; // position (Kinect coords)
 	};
 	
 	// Classify this pixel: 0 for bad, small number for close, >=10 for match.
-	int classify_pixel(int x,int y,debug_t &debug) const;
+	int classify_pixel(int x,int y,debug_t &debug);
 };
 
-int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug) const
+int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug)
 {
 	const float min_up=-1.5; // meters along up vector to start search (below sensor)
 	const float max_up=0.1; // meters along up vector to end search (above sensor)
 	
-	const float max_distance=9.0; // meters to farthest possible target
+	const float max_distance=6.0; // meters to farthest possible target
 	const float min_distance=0.5; // meters to closest possible target
 	
 	const int delx=9/decimate,dely=9/decimate; // pixel shifts for neighbor search	
@@ -456,7 +460,6 @@ int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug) const
 
 	vec3 loc=img.loc(x,y); // meters
 	
-	debug.P=loc;
 	float toFloor=loc.dot(up); // m to floor
 	float m=loc.mag(); // m range
 	
@@ -471,7 +474,6 @@ int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug) const
 	    in_gridline=true;
 	debug.b=in_gridline?255:0; // draw global grid (coordinate system debug)
 	
-	
 	debug.r=toFloor*10.0*256; // Up vector, 10cm wrap
 
 	if ( m<min_distance || m>max_distance) return 0; // too close or far
@@ -479,24 +481,36 @@ int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug) const
 
 	/* This pixel passes the "up" Z-range filter. Check neighbors. */
 	if (!(x-delx>=0 && y-dely>=0 && x+delx<img.w && y+dely<img.h)) return 3; // neighbors out of bounds
+	
+	int grid_x=global.x/rmc_navigator::GRIDSIZE;
+	int grid_y=global.y/rmc_navigator::GRIDSIZE;
+	if (!driveable.inbounds(grid_x,grid_y)) { // not inside the field--ignore fast
+	  debug.b >>= 2; debug.r >>= 2; // darken
+	  return 10; // out of grid bounds
+	}
 
 	// Check surface normal to check driveability
-	vec3 N=normalize( // take cross product of nearby diagonals
-	(img.loc(x+delx,y-dely)-
-	 img.loc(x-delx,y+dely))
-	.cross(
-	(img.loc(x-delx,y-dely)-
-	 img.loc(x+delx,y+dely))
-	));
-	debug.N=N;
+	vec3 TL=img.loc(x-delx,y-dely);  vec3 TR=img.loc(x+delx,y-dely);
+	vec3 BL=img.loc(x-delx,y+dely);  vec3 BR=img.loc(x+delx,y+dely);
+	vec3 N=normalize( (TR-BL) .cross( (TL-BR) ));
+	float minZ=std::min( std::min(TL.z,TR.z), std::min(BL.z,BR.z) );
+	
 
 	const float normal_Y_max=0.90; // surface normal Y component (above here is floor)
 	
-	if (dot(N,up)>normal_Y_max) {
+	bool drive=false;
+	if (dot(N,up)>normal_Y_max) { // terrain is level here
 		debug.g=255; // show floor as paydirt, green
-		return 4; // that area looks driveable!
+		driveable.write(grid_x,grid_y,true);
+		return 4;
 	}
-	return 3;
+	else { // terrain uneven
+	  if (loc.z<minZ+20.0)
+	    straddle.write(grid_x,grid_y,true);
+	  else // way higher than neighbors
+	    obstacle.write(grid_x,grid_y,true);
+	}
+	return 5;
 }
 
 void depth_cb(freenect_device *dev, void *v_depth, uint32_t timestamp)
@@ -529,7 +543,7 @@ void depth_cb(freenect_device *dev, void *v_depth, uint32_t timestamp)
 
 		kinectPixelWatcher::debug_t debug;
 		debug.r=debug.g=debug.b=0;
-		int pix=watch.classify_pixel(x,y,debug);
+		watch.classify_pixel(x,y,debug);
 
 		depth_mid[3*i+0]=debug.r;
 		depth_mid[3*i+1]=debug.g;
@@ -539,6 +553,10 @@ void depth_cb(freenect_device *dev, void *v_depth, uint32_t timestamp)
 	pthread_cond_signal(&gl_frame_cond);
 	pthread_mutex_unlock(&gl_backbuf_mutex);
 	
+	
+	static file_ipc_link<bitgrid> driveable_link("driveable.grid");  driveable_link.publish(watch.driveable);
+	static file_ipc_link<bitgrid> straddle_link("straddle.grid");  straddle_link.publish(watch.straddle);
+	static file_ipc_link<bitgrid> obstacle_link("obstacle.grid");  obstacle_link.publish(watch.obstacle);
 }
 
 /*********************** Back to verbatim libfreenect/examples/glview.c code ****************/

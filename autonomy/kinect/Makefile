@@ -1,5 +1,5 @@
 OPTS=-O3
-CFLAGS= $(OPTS) -I. -I../include 
+CFLAGS= -std=c++11 $(OPTS) -I. -I../include 
 LDFLAGS=  -lfreenect -lpthread -lusb-1.0 -lGL -lglut 
 
 all: kinect
