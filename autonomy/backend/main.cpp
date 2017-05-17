@@ -600,9 +600,9 @@ void robot_manager_t::autonomous_state()
 	}
 	else if(robot.state==state_dump_pull)
 	{
-		int howfast=40;
+		int howfast=32;
 		int cur=(signed short)robot.sensor.Rcount;
-		int target=500;
+		int target=box_raise_max;
 		if (!speed_limit(howfast,cur,target,+1)  || time_in_state>60.0)
 			enter_state(state_dump_rattle);
 		else
@@ -619,7 +619,7 @@ void robot_manager_t::autonomous_state()
 	//Push fabric back after dumping
 	else if(robot.state==state_dump_push)
 	{
-		int howfast=40;
+		int howfast=32;
 		int cur=(signed short)robot.sensor.Rcount;
 		int target=0;
 		if (!speed_limit(howfast,cur,target,-1)  || time_in_state>20.0)
