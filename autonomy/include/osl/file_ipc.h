@@ -78,7 +78,7 @@ public:
 	// Check for updated data in the file.  
 	//  Returns true if the data has been updated, false if not.
 	bool subscribe(IPC_DATA &data) {
-		FILE *f=fopen(filename.c_str(),"rb+"); // try read first
+		FILE *f=fopen(filename.c_str(),"rb"); // try read first
 		bool changed=false;
 		if (f) {
 			if (fread(&current,sizeof(POD_counter_data),1,f)==1)
