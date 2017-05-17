@@ -30,20 +30,20 @@ public:
   
   
   
-  void print(void) {
+  void print(void) const {
     vec3_print("   X",x);
     vec3_print("   Y",y);
     vec3_print("   Z",z);
   }
   
   // Convert local coordinates out into global coordinates
-  vec3 global_from_local(vec3 local)
+  vec3 global_from_local(vec3 local) const
   {
     return local.x*x + local.y*y + local.z*z;
   }
 
   // Convert global coordinates down into local coordinates
-  vec3 local_from_global(vec3 global)
+  vec3 local_from_global(vec3 global) const
   {
     return vec3(dot(global,x), dot(global,y), dot(global,z));
   }
@@ -75,13 +75,13 @@ public:
   transform(vec3 origin_=vec3(0,0,0)) :origin(origin_) {}
   
   // Convert local coordinates out into global coordinates
-  vec3 global_from_local(vec3 local)
+  vec3 global_from_local(vec3 local) const
   {
     return origin+basis.global_from_local(local);
   }
 
   // Convert global coordinates down into local coordinates
-  vec3 local_from_global(vec3 global)
+  vec3 local_from_global(vec3 global) const
   {
     return basis.local_from_global(global-origin);
   }
@@ -90,7 +90,6 @@ public:
   void local_translate(vec3 offset) 
   {
     origin += basis.global_from_local(offset);
-    
   }
 
 };

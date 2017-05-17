@@ -385,11 +385,12 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
   SurviveObjectOrientation &basis=o->orient;
   vec3 vive=o->position; // meters, relative to lighthouse 0
   vive*=100; // to cm
-  vive.x-=75; // x==0 lies between the sensors
+  vive.x-=75; // x==0 on centerline between the sensors
+  vive.x+=378/2; // set X=0 to left edge of arena (driving coords, not centered)
   vive.y-=40; // origin at the front of the dump area
   
   osl::transform tf_robot;
-  tf_robot.origin=vive+basis.x*(-60); // vive to robot turning center
+  tf_robot.origin=vive+basis.x*(-65)+basis.y*(-25); // vive to robot turning center
   tf_robot.basis.z=-basis.z; // robot Z is straight up
   tf_robot.basis.x=basis.y; // robot X is driving forward
   tf_robot.basis.y=basis.x; // robot Y points to robot's left
@@ -398,27 +399,27 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
   robot_link.publish(tf_robot);
   
   osl::transform tf_sensor;
-  tf_sensor.origin=vive+basis.x*(-10); // sensor position
+  tf_sensor.origin=vive+basis.x*(-18); // sensor position
   
   /*
-    Sensors tilted down in vive's Y-Z plane:
-    Vive:
+    Sensors are rotated by 45 degrees in vive's Y-Z plane:
+    Vive controller facing up and backward:
       v-> Y
       |
       v
       Z
     
-    Sensor:
-        Z
-       /
+    Sensor facing down and forward:
+    Z
+     \
       s
-       \
-        X
+     /
+    Y 
   */
   
+  tf_sensor.basis.y=normalize(basis.y+basis.z);
   tf_sensor.basis.z=normalize(basis.y-basis.z);
-  tf_sensor.basis.x=normalize(basis.y+basis.z);
-  tf_sensor.basis.y=basis.x;
+  tf_sensor.basis.x=basis.x;
   
   static file_ipc_link<osl::transform> sensor_link("sensor.tf");
   sensor_link.publish(tf_sensor);
