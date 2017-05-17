@@ -480,7 +480,9 @@ int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug)
 	if (toFloor<min_up || toFloor>max_up) return 1; // bad up vector distance
 
 	/* This pixel passes the "up" Z-range filter. Check neighbors. */
-	if (!(x-delx>=0 && y-dely>=0 && x+delx<img.w && y+dely<img.h)) return 3; // neighbors out of bounds
+	if (!(x-delx>=2 && y-dely>=2 && x+delx<img.w-2 && y+dely<img.h-2)) return 3; // neighbors out of bound
+	if (img.raw(x-delx,y-dely)>=KINECT_bad || img.raw(x+delx,y-dely)>=KINECT_bad 
+	 || img.raw(x-delx,y+dely)>=KINECT_bad || img.raw(x+delx,y+dely)>=KINECT_bad) return 3; // neighbors invalid
 	
 	int grid_x=global.x/rmc_navigator::GRIDSIZE;
 	int grid_y=global.y/rmc_navigator::GRIDSIZE;
@@ -496,7 +498,7 @@ int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug)
 	float minZ=std::min( std::min(TL.z,TR.z), std::min(BL.z,BR.z) );
 	
 
-	const float normal_Y_max=0.90; // surface normal Y component (above here is floor)
+	const float normal_Y_max=0.87; // surface normal Y component (above here is floor)
 	
 	bool drive=false;
 	if (dot(N,up)>normal_Y_max) { // terrain is level here
