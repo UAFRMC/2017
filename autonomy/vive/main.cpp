@@ -389,7 +389,7 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
   vive.y-=40; // origin at the front of the dump area
   
   osl::transform tf_robot;
-  tf_robot.origin=vive+basis.x*(-60); // vive to robot turning center
+  tf_robot.origin=vive+basis.x*(-65)+basis.y*(-25); // vive to robot turning center
   tf_robot.basis.z=-basis.z; // robot Z is straight up
   tf_robot.basis.x=basis.y; // robot X is driving forward
   tf_robot.basis.y=basis.x; // robot Y points to robot's left
@@ -398,7 +398,7 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
   robot_link.publish(tf_robot);
   
   osl::transform tf_sensor;
-  tf_sensor.origin=vive+basis.x*(-10); // sensor position
+  tf_sensor.origin=vive+basis.x*(-18); // sensor position
   
   /*
     Sensors tilted down in vive's Y-Z plane:
