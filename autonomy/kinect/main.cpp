@@ -464,13 +464,13 @@ int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug)
 	float m=loc.mag(); // m range
 	
 	// Add 1 meter grid lines to everything:
-	const float grid_mod=100.0;
-	const float grid_width=10.0;
 	
 	vec3 global=sensor_tf.global_from_local(vec3(loc.x,loc.z,loc.y)*100.0); // to cm
+
+	const float grid_mod=100.0; // draw 1 meter grid cells
 	bool in_gridline=false;
 	for (int axis=0;axis<3;axis++) 
-	  if (fmod(global[axis]+100.0*grid_mod,grid_mod)<grid_width)
+	  if ((0xff&(int)(global[axis]*(256/grid_mod)))<25)
 	    in_gridline=true;
 	debug.b=in_gridline?255:0; // draw global grid (coordinate system debug)
 	
