@@ -54,9 +54,9 @@ enum {
 		// These 2 are used for speed control while aligning and releasing hooks
 		count_stop = 1, // encoder count to stop on
 		count_slow = 110, // run fast until you're here
-    // These 2 are used to tell whether the box is at max or min height
-    box_raise_max = 278,
-    box_raise_min = 0
+	// These 2 are used to tell whether the box is at max or min height
+	box_raise_max = 278,
+	box_raise_min = 0
 	};
 /**
   This is a list of possible robot states.
@@ -120,13 +120,13 @@ public:
 #define AD_AREF_voltage (4.78)
 
 /** This scale factor converts an
-    Arduino Analog/Digital Data Number (0-1023)
-    to a real voltage, assuming direct feed-in. */
+	Arduino Analog/Digital Data Number (0-1023)
+	to a real voltage, assuming direct feed-in. */
 #define AD_DN2low_voltage (AD_AREF_voltage/(1024.0))
 
 /** This scale factor converts an
-    Arduino Analog/Digital Data Number (0-1023)
-    to a real voltage, after the resistor divider scaling.
+	Arduino Analog/Digital Data Number (0-1023)
+	to a real voltage, after the resistor divider scaling.
 */
 #define AD_DN2high_voltage ((AD_AREF_voltage)*(11.0)/1024.0)
 
@@ -144,12 +144,12 @@ public:
 	uint32_t bucket:10; // raw A/D value from dump bucket lift encoder
 	uint32_t latency:5; // Arduino control loop latency
 
-  uint32_t Mstall:1;
+	uint32_t Mstall:1;
 	uint32_t DLstall:1;
 	uint32_t DRstall:1;
 
 	uint32_t stop:1; ///< EMERGENCY STOP button engaged
-  uint32_t heartbeat:3;
+  	uint32_t heartbeat:3;
 
 	uint32_t Mspeed:8; /// Current milliseconds per encoder tick for mining head left motor (255==stopped)
 	uint32_t Mcount:8; /// Encoder tick count for mining head left motor
@@ -161,10 +161,10 @@ public:
 
 	int32_t Rcount:16; /// Encoder tick for bag roll motor
 
-  uint32_t limit_top:8;
-  uint32_t limit_bottom:8;
+  	uint32_t limit_top:8;
+  	uint32_t limit_bottom:8;
   
-  uint32_t encoder_raw:16;
+  	uint32_t encoder_raw:16;
 };
 
 /** This class contains one "blinky" reading:
@@ -287,9 +287,9 @@ public:
  This class contains a power setting for each of the robot's actuators.
 
  The ":7" makes each a 7-bit field, with values:
- 	1 (reverse)
- 	64 (stop)
- 	127 (forward)
+	1 (reverse)
+	64 (stop)
+	127 (forward)
 */
 class robot_power {
 public:

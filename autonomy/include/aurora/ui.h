@@ -271,7 +271,7 @@ void robot_ui::update(int keys[],const robot_current &robot) {
         }
         if(keys_once['t']||keys_once['T'])
         {
-		power.torqueControl=!power.torqueControl;
+			power.torqueControl=!power.torqueControl;
         }
 
 	power.motorControllerReset=keys['r']||keys['R'];

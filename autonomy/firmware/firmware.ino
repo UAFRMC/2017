@@ -14,20 +14,13 @@
 utterly broken prototype generation code in the Arduino IDE. */
 namespace aurora {
 
-// Hardware pin wiring (for Mega)
-// BTS_motor_t motor_M(10,11,200);
-// BTS_motor_t motor_D(2,3,255); //Bag rolling motor
-// BTS_motor_t motor_L(6,7,60);
-// BTS_motor_t motor_R(8,9,60);
-// BTS_motor_t motor_F(5,4,255); // 4,5,255);
-
-
+int bts_enable_pin=22;
 // Hardware pin wiring (for Mega)
 BTS_motor_t motor_M(10,11,200);
 BTS_motor_t motor_D(12,3,255); //Bag rolling motor
 BTS_motor_t motor_L(8,9,60);
 BTS_motor_t motor_R(4,5,60);
-BTS_motor_t motor_F(6,7,255); // 4,5,255);
+BTS_motor_t motor_F(6,7,255);
 
 // Call this function frequently--it's for minimum-latency operations
 void low_latency_ops();
@@ -160,6 +153,11 @@ void send_motor_power(int power64,BTS_motor_t &motor,encoder_t &enc) {
 // Send current power values to the motors
 void send_motors(void)
 {
+  if(robot.power.motorControllerReset!=0)
+    digitalWrite(bts_enable_pin,LOW);
+  else
+    digitalWrite(bts_enable_pin,HIGH);
+ 
   int drivePower=100;
   if(robot.power.high)
   {
@@ -167,7 +165,7 @@ void send_motors(void)
   }
   motor_L.max_power=drivePower;
   motor_R.max_power=drivePower;
-
+  
   int left1=encoder_DL1.update(robot.power.left,robot.power.torqueControl==0);
   send_motor_power(left1,motor_L,encoder_DL1);
   set_direction(left1,encoder_DL2);
@@ -241,6 +239,8 @@ void low_latency_ops() {
   unsigned long micro=micros();
   milli=micro>>10; // approximately == milliseconds
 
+  
+
   //Encoder for mining motor
   encoder_M.read();
   // robot.sensor.Mspeed=encoder_M.period;
@@ -290,8 +290,8 @@ void setup()
   //digitalWrite(13,LOW);
 
   // BTS Enable Pin (Controls all pins)
-//  pinMode(bts_enable_pin,OUTPUT);
-//  digitalWrite(bts_enable_pin,HIGH);
+  pinMode(aurora::bts_enable_pin,OUTPUT);
+  digitalWrite(aurora::bts_enable_pin,HIGH);
 
 }
 
