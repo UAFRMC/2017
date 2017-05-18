@@ -7,7 +7,7 @@ CC:=gcc
 INCLUDES:=-I../include -Ilibsurvive/include/libsurvive -Ilibsurvive -Ilibsurvive/include -Ilibsurvive/redist 
 DEFINES:=-DUSE_DOUBLE
 
-CFLAGS:=$(INCLUDES) $(OPTS) -fPIC -std=gnu99 -rdynamic $(DEFINES) 
+CFLAGS:=$(INCLUDES) $(OPTS) -std=gnu99 $(DEFINES) 
 LDFLAGS:=-L/usr/local/lib -lpthread -lusb-1.0 -lz -lm -flto -g
 
 #----------
@@ -55,8 +55,7 @@ LIBSURVIVE_C:=$(LIBSURVIVE_O:.o=.c)
 # unused: redist/crc32.c
 
 lib: ./libsurvive/src/*.c ./libsurvive/redist/*.c
-	gcc -Iinclude $(INCLUDES) -c $^ $(LDFLAGS) $(DEFINES) $(OPTS)
-  
+	gcc $(CFLAGS) -c $^ $(LDFLAGS) 
 
 vive_robot :  main.cpp lib
 	g++ -Wall -std=c++11 -Iinclude $(INCLUDES) -o $@ main.cpp *.o $(LDFLAGS) $(DEFINES) $(OPTS)

@@ -717,6 +717,7 @@ usleep(20*1000); // limit to 50fps
 		CNFGSwapBuffers();
 		OGUSleep( 10000 );
 	}
+	return 0;
 }
 
 
