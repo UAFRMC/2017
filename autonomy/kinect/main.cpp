@@ -427,9 +427,18 @@ public:
 	osl::transform sensor_tf;
 	vec3 up;
 	
-	// Gridded temporary data:
 	typedef rmc_navigator nav;
-	nav::navigator_t::grid2D<float> zmin, zmax; // Z height range (cm) of detected pixels
+	
+	// Grid cells are in one of these states:
+	enum {
+	  grid_unknown=0, grid_obstacle=1, grid_straddle=2, grid_driveable=3 
+	};
+	typedef nav::navigator_t::grid2D<unsigned char> gridstate_t;
+	
+	// Gridded temporary data:
+	nav::navigator_t::grid2D<float> zmin, zmax; // Z height range (cm)
+	nav::navigator_t::grid2D<float> zsum; // total Z's observed 
+	nav::navigator_t::grid2D<unsigned short> zcount; // count of Z's observed
 	
 	// Gridded outputs:
 	bitgrid driveable; // we can see this area is driveable (drive tracks here).  Even terrain.
@@ -441,6 +450,8 @@ public:
 	{
 	  zmin.clear(+10000.0);
 	  zmax.clear(-10000.0);
+	  zsum.clear(0.0);
+	  zcount.clear(0);
 	}
 	
 	
@@ -451,13 +462,13 @@ public:
 	};
 	
 	// Classify this pixel: 0 for bad, small number for close, >=10 for match.
-	int classify_pixel(int x,int y,debug_t &debug);
+	int classify_pixel(int x,int y,debug_t &debug,gridstate_t &gridstate);
 	
 	// Check grid cells for driveability based on Z:
-	void check_grid();
+	void classify_grid(gridstate_t &gridstate);
 };
 
-inline int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug)
+inline int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug,gridstate_t &gridstate)
 {
 	const float min_up=-2.0; // meters along up vector to start search (below sensor)
 	const float max_up=0.7; // meters along up vector to end search (above sensor)
@@ -482,7 +493,7 @@ inline int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug)
 	const float grid_mod=100.0; // draw 1 meter grid cells
 	bool in_gridline=false;
 	for (int axis=0;axis<3;axis++) 
-	  if ((0xff&(int)(global[axis]*(256/grid_mod)))<25)
+	  if ((0xff&(int)(global[axis]*(256/grid_mod)))<10)
 	    in_gridline=true;
 	debug.b=in_gridline?255:0; // draw global grid (coordinate system debug)
 	debug.r=global.z*(256.0/10.0); // Up vector, 10cm wrap
@@ -493,77 +504,67 @@ inline int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug)
 	  debug.b >>= 2; debug.r >>= 2; // darken
 	  return 10; // out of grid bounds
 	}
+	
+	// Driveability from last grid state: 
+	//    enums make bright green driveable, dimmer is straddle, dimmest is full obstacle
+	debug.g=gridstate.at(grid_x,grid_y)*(255/3);
+	
 	if ( m<min_distance || m>max_distance) return 0; // too close or far
 	if (global.z<min_up || global.z>max_up) return 1; // bad up vector distance
 	
 	// Update z range for this grid cell:
+	zsum.at(grid_x,grid_y)+=global.z;
+	zcount.at(grid_x,grid_y)++;
 	float &lo=zmin.at(grid_x,grid_y);
 	float &hi=zmax.at(grid_x,grid_y);
 	if (lo>global.z) lo=global.z;
 	if (hi<global.z) hi=global.z;
 
-
-/*
-	// This pixel passes the "up" Z-range filter. Check neighbors.
-	if (!(x-delx>=2 && y-dely>=2 && x+delx<img.w-2 && y+dely<img.h-2)) return 3; // neighbors out of bound
-	if (img.raw(x-delx,y-dely)>=KINECT_bad || img.raw(x+delx,y-dely)>=KINECT_bad 
-	 || img.raw(x-delx,y+dely)>=KINECT_bad || img.raw(x+delx,y+dely)>=KINECT_bad) return 3; // neighbors invalid
-	
-	// Check surface normal to check driveability
-	vec3 TL=img.loc(x-delx,y-dely);  vec3 TR=img.loc(x+delx,y-dely);
-	vec3 BL=img.loc(x-delx,y+dely);  vec3 BR=img.loc(x+delx,y+dely);
-	vec3 N=normalize( (TR-BL) .cross( (TL-BR) ));
-	float minZ=std::min( std::min(TL.z,TR.z), std::min(BL.z,BR.z) );
-
-	const float normal_Y_max=0.87; // surface normal Y component (above here is floor)
-	
-	bool drive=false;
-	if (dot(N,up)>normal_Y_max) { // terrain is level here
-		debug.g=255; // show floor as paydirt, green
-		driveable.write(grid_x,grid_y,true);
-		return 4;
-	}
-	else { // terrain uneven
-	  if (loc.z<minZ+20.0)
-	    straddle.write(grid_x,grid_y,true);
-	  else // way higher than neighbors
-	    obstacle.write(grid_x,grid_y,true);
-	}
-	return 5;
-*/
 	return 5;
 }
 
 // Check grid cells for driveability based on Z:
-void kinectPixelWatcher::check_grid()
+void kinectPixelWatcher::classify_grid(gridstate_t &gridstate)
 {
   enum {nbor=1};
   for (int y=nbor;y<nav::GRIDY-nbor;y++)
   for (int x=nbor;x<nav::GRIDX-nbor;x++) {  
   
     // Find Z range over neighborhood
-    //   (probably better to do local smoothing to get average Z here)
   	float lo=10000.0,hi=-10000.0;
+    float sum=0.0; int count=0;
     for (int dy=-nbor;dy<=nbor;dy++)
     for (int dx=-nbor;dx<=nbor;dx++) {
       float nlo=zmin.at(x+dx,y+dy);
       float nhi=zmax.at(x+dx,y+dy);
       if (lo>nlo) lo=nlo;
       if (hi<nhi) hi=nhi;
+      sum+=zsum.at(x+dx,y+dy);
+      count+=zcount.at(x+dx,y+dy);
     }
-    
-    float zrange=hi-lo;
-    if (zrange>0) { // valid range (more than 1 pixel present)
-      const float drive_range=0.05; // can drive over obstacles / holes this high
-      const float straddle_range=0.18; // can straddle obstacles / holes this high
-      if (zrange <= drive_range) { 
+    int state=grid_unknown;
+    if (count>=(nbor+1+nbor)*(nbor+1+nbor) && zcount.at(x,y)>3) 
+    { // enough samples to be plausible:
+      const float drive_range=0.05; // can drive over humps / holes this high
+      const float straddle_range=0.18; // can straddle humps this high
+      
+      float mean=sum/count;
+      float hump=hi-mean; // obstacle height (always >=0)
+      float hole=mean-lo; // hole depth (always >=0)
+      
+      if (hump <= drive_range && hole <=drive_range) 
+      {  // really flat--can put tracks here.
+        state=grid_driveable;
         driveable.write(x,y,true);
-      } else if (zrange <= straddle_range) {
+      } else if (hump <= straddle_range) { // can straddle with mining head?
+        state=grid_straddle;
         straddle.write(x,y,true);
-      } else { // zrange >straddle_range
+      } else { // hump >straddle_range: can't drive over it at all
+        state=grid_obstacle;
         obstacle.write(x,y,true);
       }
     }
+    gridstate.at(x,y)=state;
     
   }
 }
@@ -586,6 +587,7 @@ void depth_cb(freenect_device *dev, void *v_depth, uint32_t timestamp)
 	//up.z+=0.02; // correct weak back tilt
 	up=normalize(up);
 	kinectPixelWatcher watch(img,up);
+	static kinectPixelWatcher::gridstate_t gridstate; // <- static to use frame coherence for display operation
 	watch.sensor_tf=sensor_tf;
 	
 	pthread_mutex_lock(&gl_backbuf_mutex);
@@ -598,7 +600,7 @@ void depth_cb(freenect_device *dev, void *v_depth, uint32_t timestamp)
 
 		kinectPixelWatcher::debug_t debug;
 		debug.r=debug.g=debug.b=0;
-		watch.classify_pixel(x,y,debug);
+		watch.classify_pixel(x,y,debug,gridstate);
 
 		depth_mid[3*i+0]=debug.r;
 		depth_mid[3*i+1]=debug.g;
@@ -608,6 +610,7 @@ void depth_cb(freenect_device *dev, void *v_depth, uint32_t timestamp)
 	pthread_cond_signal(&gl_frame_cond);
 	pthread_mutex_unlock(&gl_backbuf_mutex);
 	
+	watch.classify_grid(gridstate);
 	
 	static file_ipc_link<bitgrid> driveable_link("driveable.grid");  driveable_link.publish(watch.driveable);
 	static file_ipc_link<bitgrid> straddle_link("straddle.grid");  straddle_link.publish(watch.straddle);
