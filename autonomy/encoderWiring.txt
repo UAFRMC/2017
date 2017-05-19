@@ -1,0 +1,44 @@
+
+
+2017 encoder bus (from firmware, should all be working)
+
+
+Bus 1: roll motor and limit switches
+
+pin 3, Arduino 48, Limit switch, top
+pin 4, Arduino 34, 
+pin 5, Arduino 50, Limit switch, bottom
+pin 6, Arduino 32, Roll motor
+pin 7, Arduino 52, 
+pin 8, Arduino 30, 
+
+
+
+
+Bus 2: mining and drive wheels
+
+pin 3, Arduino 42, Mining head
+pin 4, Arduino 40, 
+pin 5, Arduino 44, Left front wheel
+pin 6, Arduino 38, Left back wheel
+pin 7, Arduino 46, Right front wheel
+pin 8, Arduino 36, Right back wheel
+
+
+
+
+
+
+OBSOLETE 2016 encoder bus:
+Motor 	Encoder#	Analog Pin
+DR1		4	  		A1
+DR2		8			A5
+DL1		5			A2
+DL2		7			A4
+M 		3			A0
+R		6			A3
+
+Notes:DR1 is the left side front drive motor. This convention follows for all drive motors
+
+
+
