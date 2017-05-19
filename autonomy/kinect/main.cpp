@@ -426,14 +426,23 @@ public:
 	kinect_depth_image &img;
 	osl::transform sensor_tf;
 	vec3 up;
-	kinectPixelWatcher(kinect_depth_image &img_,vec3 up_) 
-		:img(img_), up(normalize(up_)) 
-	{}
+	
+	// Gridded temporary data:
+	typedef rmc_navigator nav;
+	nav::navigator_t::grid2D<float> zmin, zmax; // Z height range (cm) of detected pixels
 	
 	// Gridded outputs:
 	bitgrid driveable; // we can see this area is driveable (drive tracks here).  Even terrain.
 	bitgrid straddle; // we can see this object can be straddled (drive over it between tracks).  Uneven terrain.
 	bitgrid obstacle; // we can see this object is too high to be straddled.  High obstacle.
+	
+	kinectPixelWatcher(kinect_depth_image &img_,vec3 up_) 
+		:img(img_), up(normalize(up_)) 
+	{
+	  zmin.clear(+10000.0);
+	  zmax.clear(-10000.0);
+	}
+	
 	
 	// Debug outputs for this pixel.
 	class debug_t {
@@ -443,12 +452,15 @@ public:
 	
 	// Classify this pixel: 0 for bad, small number for close, >=10 for match.
 	int classify_pixel(int x,int y,debug_t &debug);
+	
+	// Check grid cells for driveability based on Z:
+	void check_grid();
 };
 
-int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug)
+inline int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug)
 {
-	const float min_up=-1.5; // meters along up vector to start search (below sensor)
-	const float max_up=0.1; // meters along up vector to end search (above sensor)
+	const float min_up=-2.0; // meters along up vector to start search (below sensor)
+	const float max_up=0.7; // meters along up vector to end search (above sensor)
 	
 	const float max_distance=6.0; // meters to farthest possible target
 	const float min_distance=0.5; // meters to closest possible target
@@ -460,43 +472,48 @@ int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug)
 
 	vec3 loc=img.loc(x,y); // meters
 	
-	float toFloor=loc.dot(up); // m to floor
-	float m=loc.mag(); // m range
+	//float toFloor=loc.dot(up); // m to floor	
+	float m=loc.mag(); // total distance
 	
-	// Add 1 meter grid lines to everything:
-	
+	// Compute global-coordinates position
 	vec3 global=sensor_tf.global_from_local(vec3(loc.x,loc.z,loc.y)*100.0); // to cm
 
+  // Add 1 meter grid lines to everything
 	const float grid_mod=100.0; // draw 1 meter grid cells
 	bool in_gridline=false;
 	for (int axis=0;axis<3;axis++) 
 	  if ((0xff&(int)(global[axis]*(256/grid_mod)))<25)
 	    in_gridline=true;
 	debug.b=in_gridline?255:0; // draw global grid (coordinate system debug)
+	debug.r=global.z*(256.0/10.0); // Up vector, 10cm wrap
 	
-	debug.r=toFloor*10.0*256; // Up vector, 10cm wrap
-
+	int grid_x=global.x/rmc_navigator::GRIDSIZE;
+	int grid_y=global.y/rmc_navigator::GRIDSIZE;
+	if (!driveable.inbounds(grid_x,grid_y)) { // not inside the field--ignore it
+	  debug.b >>= 2; debug.r >>= 2; // darken
+	  return 10; // out of grid bounds
+	}
 	if ( m<min_distance || m>max_distance) return 0; // too close or far
-	if (toFloor<min_up || toFloor>max_up) return 1; // bad up vector distance
+	if (global.z<min_up || global.z>max_up) return 1; // bad up vector distance
+	
+	// Update z range for this grid cell:
+	float &lo=zmin.at(grid_x,grid_y);
+	float &hi=zmax.at(grid_x,grid_y);
+	if (lo>global.z) lo=global.z;
+	if (hi<global.z) hi=global.z;
 
-	/* This pixel passes the "up" Z-range filter. Check neighbors. */
+
+/*
+	// This pixel passes the "up" Z-range filter. Check neighbors.
 	if (!(x-delx>=2 && y-dely>=2 && x+delx<img.w-2 && y+dely<img.h-2)) return 3; // neighbors out of bound
 	if (img.raw(x-delx,y-dely)>=KINECT_bad || img.raw(x+delx,y-dely)>=KINECT_bad 
 	 || img.raw(x-delx,y+dely)>=KINECT_bad || img.raw(x+delx,y+dely)>=KINECT_bad) return 3; // neighbors invalid
 	
-	int grid_x=global.x/rmc_navigator::GRIDSIZE;
-	int grid_y=global.y/rmc_navigator::GRIDSIZE;
-	if (!driveable.inbounds(grid_x,grid_y)) { // not inside the field--ignore fast
-	  debug.b >>= 2; debug.r >>= 2; // darken
-	  return 10; // out of grid bounds
-	}
-
 	// Check surface normal to check driveability
 	vec3 TL=img.loc(x-delx,y-dely);  vec3 TR=img.loc(x+delx,y-dely);
 	vec3 BL=img.loc(x-delx,y+dely);  vec3 BR=img.loc(x+delx,y+dely);
 	vec3 N=normalize( (TR-BL) .cross( (TL-BR) ));
 	float minZ=std::min( std::min(TL.z,TR.z), std::min(BL.z,BR.z) );
-	
 
 	const float normal_Y_max=0.87; // surface normal Y component (above here is floor)
 	
@@ -513,6 +530,42 @@ int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug)
 	    obstacle.write(grid_x,grid_y,true);
 	}
 	return 5;
+*/
+	return 5;
+}
+
+// Check grid cells for driveability based on Z:
+void kinectPixelWatcher::check_grid()
+{
+  enum {nbor=1};
+  for (int y=nbor;y<nav::GRIDY-nbor;y++)
+  for (int x=nbor;x<nav::GRIDX-nbor;x++) {  
+  
+    // Find Z range over neighborhood
+    //   (probably better to do local smoothing to get average Z here)
+  	float lo=10000.0,hi=-10000.0;
+    for (int dy=-nbor;dy<=nbor;dy++)
+    for (int dx=-nbor;dx<=nbor;dx++) {
+      float nlo=zmin.at(x+dx,y+dy);
+      float nhi=zmax.at(x+dx,y+dy);
+      if (lo>nlo) lo=nlo;
+      if (hi<nhi) hi=nhi;
+    }
+    
+    float zrange=hi-lo;
+    if (zrange>0) { // valid range (more than 1 pixel present)
+      const float drive_range=0.05; // can drive over obstacles / holes this high
+      const float straddle_range=0.18; // can straddle obstacles / holes this high
+      if (zrange <= drive_range) { 
+        driveable.write(x,y,true);
+      } else if (zrange <= straddle_range) {
+        straddle.write(x,y,true);
+      } else { // zrange >straddle_range
+        obstacle.write(x,y,true);
+      }
+    }
+    
+  }
 }
 
 void depth_cb(freenect_device *dev, void *v_depth, uint32_t timestamp)
