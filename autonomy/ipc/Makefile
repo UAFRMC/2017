@@ -11,4 +11,4 @@ dump_grid: dump_grid.cpp
 	g++ $(CFLAGS) $< -o $@
 
 clean:
-	rm dump_tf dump_grid
+	- rm dump_tf dump_grid

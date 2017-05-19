@@ -850,7 +850,7 @@ void robot_manager_t::update(void) {
 
 		float wheelbase=130.0; // cm between wheels (tracks)
 
-		float drivecount2cm=9*0.050/36*100.0; // cm of driving per wheel encoder tick, ==9 sprocket drive pegs at 50mm apart, 36 encoder counts per revolution
+		float drivecount2cm=9*(19.0/27.0)*0.050/36*100.0; // cm of driving per wheel encoder tick, ==9 sprocket drive pegs at 50mm apart, 36 encoder counts per revolution
 
 		locator.move_wheels(
 			fix_wrap256(robot.sensor.DL1count-old_sensor.DL1count)*drivecount2cm,
