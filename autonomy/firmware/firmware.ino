@@ -96,7 +96,7 @@ speed_controller_t<NUM_AVERAGES> encoder_DR1(4,0,0,encoder_bus_2[4],13,motor_R);
 speed_controller_t<NUM_AVERAGES> encoder_DR2(4,0,0,encoder_bus_2[7],13,motor_R);  //Right back wheel encoder
 
 encoder_t limit_top(encoder_bus_1[3]);
-encoder_t limit_bottom(encoder_bus_2[5]);
+encoder_t limit_bottom(encoder_bus_1[5]);
 
 
 
