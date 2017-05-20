@@ -81,22 +81,22 @@ CommunicationChannel BlinkyR(BlinkyRport);
 const int encoder_raw_pin_count=12;
 const int encoder_raw_pins[encoder_raw_pin_count]={48,34,50,32,52,30, 42,40,44,38,46,36};
 
-//const int encoder_pins[6]={48,32,50,30,34,52}; //bus 1-4
-const int encoder_pins[6]={42,32,44,36,40,46};  //bus 5-8 (32 should be 38)
+const int encoder_bus_1[9]={0,0,0, 48,34,50,32,52,30}; //bus 1-4
+const int encoder_bus_2[9]={0,0,0, 42,40,44,38,46,36}; //bus 5-8
 
 enum
 {
   NUM_AVERAGES=2
 };
-speed_controller_t<NUM_AVERAGES> encoder_M(4,0,0,encoder_pins[0],80,motor_M); // Mining head left side motor
-speed_controller_t<NUM_AVERAGES> encoder_R(4,0,0,encoder_pins[1],80,motor_D); // Encoder for roll motor
-speed_controller_t<NUM_AVERAGES> encoder_DL1(4,0,0,encoder_pins[2],13,motor_L);  //Left front wheel encoder
-speed_controller_t<NUM_AVERAGES> encoder_DL2(4,0,0,encoder_pins[3],13,motor_L);  //Left back wheel encoder
-speed_controller_t<NUM_AVERAGES> encoder_DR1(4,0,0,encoder_pins[4],13,motor_R); //Right front wheel encoder
-speed_controller_t<NUM_AVERAGES> encoder_DR2(4,0,0,encoder_pins[5],13,motor_R);  //Right back wheel encoder
+speed_controller_t<NUM_AVERAGES> encoder_M(4,0,0,encoder_bus_2[3],80,motor_M); // Mining head left side motor
+speed_controller_t<NUM_AVERAGES> encoder_R(4,0,0,encoder_bus_1[6],80,motor_D); // Encoder for roll motor
+speed_controller_t<NUM_AVERAGES> encoder_DL1(4,0,0,encoder_bus_2[5],13,motor_L);  //Left front wheel encoder
+speed_controller_t<NUM_AVERAGES> encoder_DL2(4,0,0,encoder_bus_2[8],13,motor_L);  //Left back wheel encoder
+speed_controller_t<NUM_AVERAGES> encoder_DR1(4,0,0,encoder_bus_2[4],13,motor_R); //Right front wheel encoder
+speed_controller_t<NUM_AVERAGES> encoder_DR2(4,0,0,encoder_bus_2[7],13,motor_R);  //Right back wheel encoder
 
-encoder_t limit_top(48);
-encoder_t limit_bottom(50);
+encoder_t limit_top(encoder_bus_1[3]);
+encoder_t limit_bottom(encoder_bus_2[5]);
 
 
 

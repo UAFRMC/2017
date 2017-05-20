@@ -18,11 +18,11 @@ pin 8, Arduino 30,
 Bus 2: mining and drive wheels
 
 pin 3, Arduino 42, Mining head
-pin 4, Arduino 40, 
+pin 4, Arduino 40, Right front wheel
 pin 5, Arduino 44, Left front wheel
-pin 6, Arduino 38, Left back wheel
-pin 7, Arduino 46, Right front wheel
-pin 8, Arduino 36, Right back wheel
+pin 6, Arduino 38, 
+pin 7, Arduino 46, Right back wheel
+pin 8, Arduino 36, Left back wheel
 
 
 
