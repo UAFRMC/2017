@@ -202,6 +202,11 @@ void robot_display_setup(const robot_current &robot) {
 	glVertex2fv(robot_draw+vec2(0,robot_draw_y));
 
 	double dump_angle=-30.0*((robot.sensor.bucket-180.0)/(950.0-180.0))+10.0;
+	
+	if (robot.loc.pitch!=0.0) {
+	  robotPrintln("Robot pitch: %.1f deg\n",robot.loc.pitch);
+	  dump_angle=-robot.loc.pitch;
+	}
 
 	vec2 dump_tip=dump_pivot + rotate(vec2(0,robot_draw_y-10),dump_angle);
 	vec2  box_tip=dump_pivot + rotate(vec2(0,15),dump_angle);
@@ -225,7 +230,7 @@ void robot_display_setup(const robot_current &robot) {
 	glVertex2fv(Mprog+rotate(vec2(-20,0),dump_angle));
 	glEnd();
 	
-	// Graphical illustration of the box:
+	// Graphical illustration of the dust storage box:
 	vec2 box0=box_tip;
 	vec2 box1=dump_tip;
 	float Rprogress=((robot.sensor.Rcount-box_raise_min)/float(box_raise_max-box_raise_min));

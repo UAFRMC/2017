@@ -29,6 +29,11 @@
 /** Video image analysis gets dumped here: */
 #include "../aruco/viewer/location_binary.h"
 
+// New vive localization
+#include "osl/transform.h"
+#include "osl/file_ipc.h"
+
+
 #include "aurora/simulator.h"
 #include <iostream>
 
@@ -693,6 +698,22 @@ void robot_manager_t::update(void) {
 	}
 #endif
 
+  // Check for an updated location from the vive
+  
+	static osl::transform robot_tf;
+	static file_ipc_link<osl::transform> robot_tf_link("robot.tf");
+	if (robot_tf_link.subscribe(robot_tf)) {
+	  robot.loc.x=robot_tf.origin.x-field_x_hsize; // make bin the origin
+	  robot.loc.y=robot_tf.origin.y;
+	  robot.loc.z=robot_tf.origin.z;
+	  
+	  robot.loc.angle=(180.0/M_PI)*atan2(robot_tf.basis.x.x,robot_tf.basis.x.y);
+	  robot.loc.pitch=(180.0/M_PI)*robot_tf.basis.x.z;
+	}
+  
+
+
+/*
 // Check for an updated location from the "camera" vision application
 	if (locator.update_vision("../aruco/viewer/marker.bin")) {
   	robot.loc=locator.merged; // copy out robot location
@@ -719,6 +740,7 @@ void robot_manager_t::update(void) {
 			robot.loc.angle=bin.angle;
 			robot.loc.confidence=std::max(robot.loc.confidence+0.2,0.0);
 		}
+		*/
 /*
 		static uint32_t last_vidcap=-1;
 		if (bin.vidcap_count!=last_vidcap) {
@@ -729,7 +751,7 @@ void robot_manager_t::update(void) {
 				SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
 			last_vidcap=bin.vidcap_count;
 		}*/
-	}
+	//}
 
 // Check for a command broadcast (briefly)
 	int n;

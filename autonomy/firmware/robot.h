@@ -167,60 +167,6 @@ public:
   	uint32_t encoder_raw:16;
 };
 
-/** This class contains one "blinky" reading:
-   a detection of an emitter at a known angle from the robot.
-*/
-class robot_blinky_reading {
-public:
-	uint16_t angle:12; // 0 - 3900 raw stepper angle of centerline
-	uint16_t many:4; // how many detections: 0 for invalid, 15 for lots
-
-	bool valid() const {
-		return many>0;
-	}
-
-	bool operator==(const robot_blinky_reading &b) const {
-		return b.angle==angle && b.many==many;
-	}
-	void clear(void) {
-		angle=0;
-		many=0;
-	}
-};
-
-/** This is an immediate update for one blinky,
-  adding timing and target info.  It's sent over serial
-  as "0xB" messages.
-*/
-class robot_blinky_update : public robot_blinky_reading {
-public:
-	uint16_t millitime:13; // low bits of millisecond counter at last detection
-	uint16_t side:1; // which detector: 0 for left, 1 for right 
-	uint16_t xmit:2; // which emitter: 0-2 for left, middle, right xmitters (3 is end-of-sweep)
-
-	void clear(void) {
-		millitime=0;
-		side=0;
-		xmit=0;
-	}
-
-	enum {steps_per_rev=4075}; //  angular steps per full motor revolution, mini geared stepper
-	enum {steps_from_zero=110}; // angular steps to reach true robot Y axis alignment
-
-	// Return the angle, in degrees, between this report and the robot's orientation
-	float angle_degrees(void) const {
-		return 360.0*((angle+steps_from_zero)*(1.0/steps_per_rev));
-	}
-};
-
-/** This class contains the most recent "blinky" scanning infrared sensor reports. 
-*/
-class robot_blinky_reports {
-public:
-	enum {n_xmit=3};
-	enum {n_reports=n_xmit+1}; // last report is for hitting end of servo travel
-	robot_blinky_update reports[n_reports];
-};
 
 /** This class contains robot localization information. */
 class robot_localization {
@@ -233,12 +179,14 @@ public:
 //   angle==90 means facing due right (world +x = robot forward)
 	float angle;
 
+// Mining head's vertical pitch, in degrees.
+//    pitch==0 means the mining head is in rest configuration.
+//    positive pitch pushes the mining head back up away from the ground
+  float pitch;
+
 // Confidence in our position (1.0: recent detection; 0.0: no idea)
 	float confidence;
 
-// Last known blinky reports, for left (0) and right (1) sides
-	enum {n_blinky=2};
-	robot_blinky_reports blinky[n_blinky];
 
 #ifdef __OSL_VEC2_H
 // 2D vector utility functions:

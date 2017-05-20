@@ -9,19 +9,24 @@
 #include "../osl/vec4.h"
 #include "../osl/vec2.h"
 
+void blend_angles(float &dest,const float &src,float weight) {
+	if(fabs(src - dest) > 180) { // must reduce source to match dest
+		float sa=src;
+		while (sa>dest+180) sa-=360;
+		while (sa<dest-180) sa+=360;
+		dest=sa*weight+dest*(1.0-weight);
+		while (dest>180) dest-=360;
+		while (dest<-180) dest+=360;
+	} else {
+		dest=src*weight+dest*(1.0-weight);
+	}
+}
+
 void blend(robot_localization &dest, const robot_localization &src, float weight) {
 	dest.x=src.x*weight+dest.x*(1.0-weight);
 	dest.y=src.y*weight+dest.y*(1.0-weight);
-	if(fabs(src.angle - dest.angle) > 180) { // must reduce source to match dest
-		float sa=src.angle;
-		while (sa>dest.angle+180) sa-=360;
-		while (sa<dest.angle-180) sa+=360;
-		dest.angle=sa*weight+dest.angle*(1.0-weight);
-		while (dest.angle>180) dest.angle-=360;
-		while (dest.angle<-180) dest.angle+=360;
-	} else {
-		dest.angle=src.angle*weight+dest.angle*(1.0-weight);
-	}
+	blend_angles(dest.angle,src.angle,weight);
+	blend_angles(dest.pitch,src.pitch,weight);
 }
 
 class robot_simulator {
