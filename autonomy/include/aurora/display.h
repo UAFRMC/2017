@@ -194,7 +194,7 @@ void robot_display_setup(const robot_current &robot) {
 	double robot_draw_y=75; // size of side view image
 	double robot_draw_x=-75;
 	vec2 robot_draw(0.6*field_x_size-robot_draw_x,200);
-	vec2 dump_pivot=robot_draw+vec2(-10,0);
+	vec2 dump_pivot=robot_draw;
 
 	glColor4f(0.0,0.0,0.0,1.0); // body (black)
 	glVertex2fv(robot_draw);
@@ -204,6 +204,7 @@ void robot_display_setup(const robot_current &robot) {
 	double dump_angle=-30.0*((robot.sensor.bucket-180.0)/(950.0-180.0))+10.0;
 
 	vec2 dump_tip=dump_pivot + rotate(vec2(10,robot_draw_y-10),dump_angle);
+	vec2  box_tip=dump_pivot + rotate(vec2(10,20),dump_angle);
 	vec2 mine_tip=dump_pivot + rotate(vec2(robot_draw_x*0.8,0),dump_angle);
 
 	glColor4f(0.0,0.0,0.0,1.0); // body (black)
@@ -222,6 +223,19 @@ void robot_display_setup(const robot_current &robot) {
 	glVertex2fv(Mprog);
 	glVertex2fv(Mprog+rotate(vec2(0,20),dump_angle));
 	glVertex2fv(Mprog+rotate(vec2(-20,0),dump_angle));
+	glEnd();
+	
+	// Graphical illustration of the box:
+	vec2 box0=box_tip;
+	vec2 box1=dump_tip;
+	float Rprogress=((robot.sensor.Rcount-box_raise_min)/float(box_raise_max-box_raise_min));
+	vec2 box=box0+Rprogress*(box1-box0);
+	glColor4f(0.8,0.8,0.2,1.0);
+	glBegin(GL_TRIANGLE_FAN);
+	glVertex2fv(box);
+	glVertex2fv(box+rotate(vec2(10,0),dump_angle));
+	glVertex2fv(box+rotate(vec2(10,30),dump_angle));
+	glVertex2fv(box+rotate(vec2(0,30),dump_angle));
 	glEnd();
 
 // Draw the current autonomy state
@@ -366,57 +380,6 @@ void robot_display(const robot_localization &loc,double alpha=1.0)
 	glEnd();
 
 	glColor4f(1.0,1.0,1.0,1.0);
-
-// Graphical illustration of blinky reports:
-	enum {n_history=10};
-	class blinkhist {
-	public:
-		int age;
-		int xmit;
-		vec2 start, end;
-	};
-	static blinkhist blinkhistory[n_history];
-	static int blinkhistory_count=0;
-
-	enum {n_blinky=robot_localization::n_blinky};
-	enum {n_xmit=robot_blinky_reports::n_xmit};
-	static int last_update[n_blinky][n_xmit];  // change detector
-
-	for (int blinky=0;blinky<n_blinky;blinky++)
-	for (int xmit=0;xmit<n_xmit;xmit++) {
-		const robot_blinky_update &b=loc.blinky[blinky].reports[xmit];
-		if (b.millitime!=0 && last_update[blinky][xmit]!=b.millitime)
-		{ // new data!
-			const char *xmitname[]={"A","B","C","K"};
-			robotPrintln("drawblinky%s %s %d %d\n",
-				blinky?"L":"R", xmitname[xmit], b.angle, b.many);
-			blinkhist h;
-			h.age=0;
-			h.xmit=xmit;
-			h.start=loc.world_from_robot(vec2(robot_rt_blinky*(blinky*2-1),robot_fw_blinky)); // C-0.5*F+(blinky*2-1)*0.8*R;
-			//float a=ang+b.angle_radians();
-			h.end=h.start+1000*loc.dir_from_deg(b.angle_degrees()); // vec2(sin(a),cos(a));
-
-			blinkhistory[blinkhistory_count++]=h;
-			if (blinkhistory_count>=n_history) blinkhistory_count=0;
-
-			last_update[blinky][xmit]=b.millitime;
-		}
-	}
-
-	glLineWidth(4.0);
-	glBegin(GL_LINES);
-	for (int bh=0;bh<n_history;bh++) {
-		blinkhist &h=blinkhistory[bh];
-		h.age++;
-		float alpha=exp(-0.001*h.age);
-		float color[4]={0.0,0.0,0.0,alpha};
-		color[h.xmit%3]=1.0;
-		glColor4fv(color);
-		glVertex2fv(h.start);
-		glVertex2fv(h.end);
-	}
-	glEnd();
 }
 
 

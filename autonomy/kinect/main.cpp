@@ -470,10 +470,10 @@ public:
 
 inline int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug,gridstate_t &gridstate)
 {
-	const float min_up=-2.0; // meters along up vector to start search (below sensor)
-	const float max_up=0.7; // meters along up vector to end search (above sensor)
+	const float min_up=-200.0; // cm along up vector to start search (below sensor)
+	const float max_up=70; // cm along up vector to end search (above sensor)
 	
-	const float max_distance=6.0; // meters to farthest possible target
+	const float max_distance=6.0; //  meters to farthest possible target
 	const float min_distance=0.5; // meters to closest possible target
 	
 	const int delx=9/decimate,dely=9/decimate; // pixel shifts for neighbor search	
@@ -507,7 +507,7 @@ inline int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug,gridsta
 	
 	// Driveability from last grid state: 
 	//    enums make bright green driveable, dimmer is straddle, dimmest is full obstacle
-	debug.g=gridstate.at(grid_x,grid_y)*(255/3);
+	debug.g=gridstate.at(grid_x,grid_y)*(255.0/3);
 	
 	if ( m<min_distance || m>max_distance) return 0; // too close or far
 	if (global.z<min_up || global.z>max_up) return 1; // bad up vector distance
@@ -526,6 +526,7 @@ inline int kinectPixelWatcher::classify_pixel(int x,int y,debug_t &debug,gridsta
 // Check grid cells for driveability based on Z:
 void kinectPixelWatcher::classify_grid(gridstate_t &gridstate)
 {
+  int count_drive=0, count_straddle=0, count_obstacle=0;
   enum {nbor=1};
   for (int y=nbor;y<nav::GRIDY-nbor;y++)
   for (int x=nbor;x<nav::GRIDX-nbor;x++) {  
@@ -543,10 +544,10 @@ void kinectPixelWatcher::classify_grid(gridstate_t &gridstate)
       count+=zcount.at(x+dx,y+dy);
     }
     int state=grid_unknown;
-    if (count>=(nbor+1+nbor)*(nbor+1+nbor) && zcount.at(x,y)>3) 
+    if (count>=7 && zcount.at(x,y)>3) 
     { // enough samples to be plausible:
-      const float drive_range=0.05; // can drive over humps / holes this high
-      const float straddle_range=0.18; // can straddle humps this high
+      const float drive_range=5.0; // can drive over humps / holes this high (cm)
+      const float straddle_range=18.0; // can straddle humps this high (cm)
       
       float mean=sum/count;
       float hump=hi-mean; // obstacle height (always >=0)
@@ -556,17 +557,22 @@ void kinectPixelWatcher::classify_grid(gridstate_t &gridstate)
       {  // really flat--can put tracks here.
         state=grid_driveable;
         driveable.write(x,y,true);
+        count_drive++;
       } else if (hump <= straddle_range) { // can straddle with mining head?
         state=grid_straddle;
         straddle.write(x,y,true);
+        count_straddle++;
       } else { // hump >straddle_range: can't drive over it at all
         state=grid_obstacle;
         obstacle.write(x,y,true);
+        count_obstacle++;
       }
     }
     gridstate.at(x,y)=state;
     
   }
+  printf("Grid cells: %d driveable, %d straddleable, %d obstacle\n",
+    count_drive,count_straddle,count_obstacle);
 }
 
 void depth_cb(freenect_device *dev, void *v_depth, uint32_t timestamp)
