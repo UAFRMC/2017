@@ -114,12 +114,8 @@ robot_current robot;
 
 // Read all robot sensors into robot.sensor
 void read_sensors(void) {
-  /*
-  2015 control board:
-   */
-  robot.sensor.battery=analogRead(A12); // 24V bus
+  robot.sensor.battery=0; 
   low_latency_ops();
-  robot.sensor.stop=robot.sensor.battery<600;
 
   robot.sensor.Mstall=encoder_M.stalled;
   robot.sensor.DRstall=encoder_DL1.stalled;
@@ -210,26 +206,6 @@ void handle_packet(A_packet_formatter<HardwareSerial> &pkt,const A_packet &p)
   }
 }
 
-// Handle blinky packets from nanos:
-void handle_blinky_packet(A_packet_formatter<HardwareSerial> &pkt,const A_packet &p,int side)
-{
-	if (p.command==0xB) { // forward incoming blinky to PC
-		robot_blinky_update b;
-		if (!p.get(b)) { // error
-			pkt.write_packet(0xE,9,"badblinky");
-		}
-		b.side=side;
-		b.millitime=milli; // re-stamp timing here (nano timings drift)
-		pkt.write_packet(0xB,sizeof(b),&b);
-	}
-	else if (p.command==0) { // ping request
-		pkt.write_packet(0,p.length,p.data);
-	}
-}
-
-
-
-
 /**** Low latency (sub-millisecond) timing section.
  * We need this for maximum accuracy in our encoder counts.
  */
@@ -282,8 +258,6 @@ void low_latency_ops() {
 void setup()
 {
   aurora::PCport.begin(57600); // Control connection to PC via USB
-  aurora::BlinkyLport.begin(57600); // Serial comms to blinky nanos
-  aurora::BlinkyRport.begin(57600);
 
   // Our ONE debug LED!
   //pinMode(13,OUTPUT);
@@ -305,9 +279,6 @@ void loop()
   A_packet p;
   if (aurora::PC.read_packet(p)) aurora::handle_packet(aurora::PC.pkt,p);
   if (!(aurora::PC.is_connected)) aurora::robot.power.stop(); // disconnected?
-
-  if (aurora::BlinkyL.read_packet(p)) aurora::handle_blinky_packet(aurora::PC.pkt,p,0);
-  if (aurora::BlinkyR.read_packet(p)) aurora::handle_blinky_packet(aurora::PC.pkt,p,1);
 
   if (milli-next_milli_send>=5)
   { // Send commands to motors

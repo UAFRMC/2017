@@ -116,7 +116,7 @@ public:
 		while (Mcount<0.0) Mcount+=120.0;
 	
 	// Update linear actuators
-		double linear_scale=1.0/8.0/64.0; // seconds to full deploy, and power scale factor
+		double linear_scale=1.0/7.0/64.0; // seconds to full deploy, and power scale factor
 		
 		bucket+=dt*(power.dump-64.0)*linear_scale;
 		if (bucket<0.0) bucket=0.0; 

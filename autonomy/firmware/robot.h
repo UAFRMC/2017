@@ -89,9 +89,9 @@ typedef enum {
 	/* Semiauto dump mode entry point: */
 	state_dump_contact, ///< final dock-and-dump mode: drive to contact bin
 	state_dump_raise, ///< raising bucket
-	state_dump_pull, ///< pull fabric forward
+	state_dump_pull, ///< pull box up
 	state_dump_rattle, ///< rattle mode to empty bucket
-	state_dump_push, ///< push fabrick back
+	state_dump_push, ///< push box back down
 	state_dump_lower, ///< lowering bucket (after dump)
 
 	/* Semiauto dump mode entry point: */

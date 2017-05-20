@@ -227,7 +227,6 @@ private:
 	// Set the front wheels and bucket to natural driving posture
 	//  Return true if we're safe to drive
 	bool drive_posture() {
-	/*
 		int tolerance=10; // dead zone (to prevent hunting)
 		if (robot.sensor.bucket<head_mine_drive-tolerance)
 		{
@@ -238,7 +237,6 @@ private:
 		{
 			robot.power.dump=power_full_bw; // lower
 		}
-	*/
 		return true;
 	}
 
@@ -584,15 +582,13 @@ void robot_manager_t::autonomous_state()
 	}
 
 	// raise bucket to dump
-	//FIXME: if linear actuators are not lifting then lower front wheel
-	//FIXME: Halt for some time before switching states
 	else if (robot.state==state_dump_raise)
 	{
 		// FIXME: Time this process
 		if(robot.sensor.bucket<head_mine_dump && time_in_state<10.0)
 		{
 			robot.power.dump=power_full_fw;
-	     	}
+	  }
 		else
 		{
 		  enter_state(state_dump_pull);
@@ -603,7 +599,7 @@ void robot_manager_t::autonomous_state()
 		int howfast=32;
 		int cur=(signed short)robot.sensor.Rcount;
 		int target=box_raise_max;
-		if (!speed_limit(howfast,cur,target,+1)  || time_in_state>60.0)
+		if (!speed_limit(howfast,cur,target,+1)  || time_in_state>15.0)
 			enter_state(state_dump_rattle);
 		else
 			robot.power.roll=64+howfast; // forward
@@ -622,23 +618,16 @@ void robot_manager_t::autonomous_state()
 		int howfast=32;
 		int cur=(signed short)robot.sensor.Rcount;
 		int target=0;
-		if (!speed_limit(howfast,cur,target,-1)  || time_in_state>20.0)
+		if (!speed_limit(howfast,cur,target,-1)  || time_in_state>15.0)
 			enter_state(state_dump_lower);
 		else
 			robot.power.roll=64-howfast; // backward
 	}
 	// lower bucket to safe driving height
-	//   DISABLED STATE in 2015 robot
 	else if (robot.state==state_dump_lower)
 	{
-		if (robot.sensor.Mcount>10) { // seek back basically to start
-			robot.power.mine=power_seek_hook_fast;
-		}
-		else if(robot.sensor.bucket>head_drive_safe  && time_in_state<20.0)
+		if(robot.sensor.bucket>head_drive_safe  && time_in_state<20.0)
 		{
-			if (robot.sensor.Mcount>3 && robot.sensor.Mcount<100) {
-				robot.power.mine=power_seek_hook_slow;
-			}
 			robot.power.dump=power_full_bw;
 		}
 		else
@@ -835,6 +824,9 @@ void robot_manager_t::update(void) {
 	} else { // real arduino
 		robot_sensors_arduino old_sensor=robot.sensor;
 		arduino.update(robot);
+		
+		// No hardware bucket height sensor: simulate in software
+		robot.sensor.bucket=sim.bucket*(950-179)+179;
 
 		//Reset encoder offset if needed
 		if(robot.sensor.limit_top%2==0)
