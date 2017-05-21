@@ -249,20 +249,22 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
     float n_torque=0.0;
     
     int n_lighthouse[NUM_LIGHTHOUSES]={0};
-    std::vector<float> angvel[NUM_LIGHTHOUSES][2]={}; // angular velocity estimates: radians/sec
     
     float tot_err=0.0; int n_err=0; int n_outlier=0;
     //if (pass==NPASS-1) printf("Per-sensor error (m): ");
     for (int L=0;L<NUM_LIGHTHOUSES;L++)
       for (int A=0;A<2;A++)
       {
+#define ANGULAR_CHECK 0
+#if ANGULAR_CHECK
       // Angular sweep speed check:
       //   predicted = geometric predicted angles
       //   sensed = observed angles
         float all_predicted[SENSORS_PER_OBJECT];
         float all_sensed[SENSORS_PER_OBJECT];
         int n_sensed=0;
-        
+#endif
+
       // float sensor_err=0.0; int n_sensor=0;
         for (int S=0;S<SENSORS_PER_OBJECT;S++)
         {
@@ -290,6 +292,7 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
             n_lighthouse[L]++;
             
             
+#if ANGULAR_CHECK
             // Angular velocity estimate:
             //    numerator is projection of sensor into LN plane
             //    denominator is distance to sensor
@@ -297,6 +300,7 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
             all_predicted[n_sensed]=predicted;
             all_sensed[n_sensed]=a;
             n_sensed++;
+#endif
           
             vec3 correction=-err*LN;
             // vec3 D=E+correction; // actual location on sweep plane
@@ -320,7 +324,8 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
           else n_outlier++;
         }
       //if (pass==NPASS-1) if (sensor_err>0) printf("%.4f(%d)\t",sensor_err/n_sensor,n_sensor);
-        #if 0
+
+#if ANGULAR_CHECK
         if (n_sensed>=2 && pass>2) 
         { // use angular ratio as distance estimate:
           
@@ -376,7 +381,7 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
             }
           }
         }
-        #endif
+#endif
     }
     //if (pass==NPASS-1) printf("\n");
     vec3 motion=sum_motion*(1.0/n_motion);
