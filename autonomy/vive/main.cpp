@@ -14,6 +14,7 @@
 
 #include "osl/file_ipc.h"
 #include "osl/transform.h"
+#include <vector>
 
 #include "src/survive_cal.h"
 #include <CNFGFunctions.h>
@@ -247,15 +248,24 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
     vec3 sum_torque=vec3(0.0); // rotational residual, global coordinates
     float n_torque=0.0;
     
-    int n_lighthouse[NUM_LIGHTHOUSES]={0}; // sensor count visible from this lighthouse
+    int n_lighthouse[NUM_LIGHTHOUSES]={0};
+    std::vector<float> angvel[NUM_LIGHTHOUSES][2]={}; // angular velocity estimates: radians/sec
     
     float tot_err=0.0; int n_err=0; int n_outlier=0;
-    if (pass==NPASS-1) printf("Per-sensor error (m): ");
-    for (int S=0;S<SENSORS_PER_OBJECT;S++)
-    {
-      float sensor_err=0.0; int n_sensor=0;
-      for (int L=0;L<NUM_LIGHTHOUSES;L++)
-        for (int A=0;A<2;A++)
+    //if (pass==NPASS-1) printf("Per-sensor error (m): ");
+    for (int L=0;L<NUM_LIGHTHOUSES;L++)
+      for (int A=0;A<2;A++)
+      {
+      // Angular sweep speed check:
+      //   predicted = geometric predicted angles
+      //   sensed = observed angles
+        
+        float predicted_min=1000.0; float predicted_max=-1000.0; 
+        float sensed_min=1000.0;  float sensed_max=-1000.0;
+        int n_sensed=0;
+        
+      // float sensor_err=0.0; int n_sensor=0;
+        for (int S=0;S<SENSORS_PER_OBJECT;S++)
         {
           FLT a=o->sensor[S].angle[L][A];
           if (a==0.0) continue;  // no data
@@ -275,11 +285,22 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
           FLT err=dot(E-LP,LN);  
           
           float ferr=fabs(err);
-          tot_err+=ferr; n_err++; sensor_err+=ferr; n_sensor++;
+          tot_err+=ferr; n_err++; // sensor_err+=ferr; n_sensor++;
           if (ferr<3.0*last_avg_err) 
           { // Include this point in the average:
             n_lighthouse[L]++;
             
+            
+            // Angular velocity estimate:
+            //    numerator is projection of sensor into LN plane
+            //    denominator is distance to sensor
+            float predicted=dot(E,LN)/length(E-LP);
+            if (predicted_min>predicted) predicted_min=predicted;
+            if (predicted_max<predicted) predicted_max=predicted;
+            if (sensed_min>a) sensed_min=a;
+            if (sensed_max<a) sensed_max=a;
+            n_sensed++;
+          
             vec3 correction=-err*LN;
             // vec3 D=E+correction; // actual location on sweep plane
             
@@ -301,9 +322,27 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
           }
           else n_outlier++;
         }
-      if (pass==NPASS-1) if (sensor_err>0) printf("%.4f(%d)\t",sensor_err/n_sensor,n_sensor);
+      //if (pass==NPASS-1) if (sensor_err>0) printf("%.4f(%d)\t",sensor_err/n_sensor,n_sensor);
+        
+        if (n_sensed>2 && pass>2) 
+        { // use angular ratio as distance estimate
+          float predicted=predicted_max-predicted_min;
+          float sensed=sensed_max-sensed_min;
+          float ratio=sensed/predicted;
+          printf("  L%d A%d angular velocity: %.5f vs %.5f = %.4f \n",
+            L,A, predicted, sensed, ratio);
+          if (fabs(sensed-predicted)>0.001) {
+            
+            float push=1.0-ratio;
+            float limit=0.1;
+            if (push>limit) push=limit;
+            if (push<-limit) push=-limit;
+            vec3 dir=nextP-o->lighthouse_position[L];
+            nextP += (0.01*n_sensed)*push*dir;
+          }
+        }
     }
-    if (pass==NPASS-1) printf("\n");
+    //if (pass==NPASS-1) printf("\n");
     vec3 motion=sum_motion*(1.0/n_motion);
     vec3 torque=sum_torque*(1.0/n_torque);
     
@@ -314,7 +353,7 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
     survive_vec3_print("    motion: ",motion);
     survive_vec3_print("                     torque: ",torque);
     
-    if (pass>0 && n_motion>0 && n_lighthouse[0]>2 && n_lighthouse[1]>2) {
+    if (pass>0 && n_motion>0) { //  && n_lighthouse[0]>2 && n_lighthouse[1]>2) {
       // Apply position offset:
       float strength=0.03*n_motion;
       const float max_strength=0.5;
@@ -369,7 +408,7 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
       //   and it's wrong if our position is wrong.
       survive_orient_nudge(&o->orient,
         to_LH,o->lighthouse_position[L]-o->position, 
-        dt*0.2);
+        dt*0.4);
     }
   }
   
