@@ -97,31 +97,6 @@ void robot_serial::update(robot_current &robot){
 					robot.sensor.Rcount += Rdiff;
 				}
 			}
-			else if (p.command==0xB)
-			{ // blinky data
-				robot_blinky_update b;
-				if (!p.get(b))
-				{
-					robotPrintln("Size mismatch on arduino -> PC blinky packet (expected %d, got %d)",sizeof(b),p.length);
-				}
-				else
-				{
-				// Stash update in localization data structure
-					robot.loc.blinky[b.side].reports[b.xmit]=b;
-
-				// Print packet
-					const char *blinkdesc[4]={"A","B","C","K"};
-#define printblink(b) "blinky%s	%s	%d	%d	%d\n", \
-			b.side?"R":"L", blinkdesc[b.xmit], b.angle, b.many, b.millitime
-
-					robotPrintln(printblink(b));
-
-					static FILE *fblink=fopen("blinky.log","a+");
-					fprintf(fblink,printblink(b));
-					fflush(fblink);
-
-				}
-			}
 			else
 			{ // unknown packet type?!
 				robotPrintln("Got unknown packet type 0x%x length %d from robot",p.command,p.length);

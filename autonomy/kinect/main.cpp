@@ -546,7 +546,7 @@ void kinectPixelWatcher::classify_grid(gridstate_t &gridstate)
     int state=grid_unknown;
     if (count>=7 && zcount.at(x,y)>3) 
     { // enough samples to be plausible:
-      const float drive_range=5.0; // can drive over humps / holes this high (cm)
+      const float drive_range=6.0; // can drive over humps / holes this high (cm)
       const float straddle_range=18.0; // can straddle humps this high (cm)
       
       float mean=sum/count;

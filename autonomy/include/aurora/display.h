@@ -202,9 +202,14 @@ void robot_display_setup(const robot_current &robot) {
 	glVertex2fv(robot_draw+vec2(0,robot_draw_y));
 
 	double dump_angle=-30.0*((robot.sensor.bucket-180.0)/(950.0-180.0))+10.0;
+	
+	if (robot.loc.pitch!=0.0) {
+	  robotPrintln("Robot pitch: %.1f deg\n",robot.loc.pitch);
+	  dump_angle=-robot.loc.pitch;
+	}
 
-	vec2 dump_tip=dump_pivot + rotate(vec2(10,robot_draw_y-10),dump_angle);
-	vec2  box_tip=dump_pivot + rotate(vec2(10,20),dump_angle);
+	vec2 dump_tip=dump_pivot + rotate(vec2(0,robot_draw_y-10),dump_angle);
+	vec2  box_tip=dump_pivot + rotate(vec2(0,15),dump_angle);
 	vec2 mine_tip=dump_pivot + rotate(vec2(robot_draw_x*0.8,0),dump_angle);
 
 	glColor4f(0.0,0.0,0.0,1.0); // body (black)
@@ -217,7 +222,7 @@ void robot_display_setup(const robot_current &robot) {
 	// Graphical illustration of Mcount:
 	vec2 mine1=mine_tip;
 	vec2 mine0=dump_tip;
-	float Mprogress=((robot.sensor.Mcount+119)%120)/120.0;
+	float Mprogress=((robot.sensor.Mcount+119)%120)/120.0*0.8;
 	vec2 Mprog=mine1+Mprogress*(mine0-mine1);
 	glColor4f(1.0,0.0,0.0,1.0);
 	glVertex2fv(Mprog);
@@ -225,7 +230,7 @@ void robot_display_setup(const robot_current &robot) {
 	glVertex2fv(Mprog+rotate(vec2(-20,0),dump_angle));
 	glEnd();
 	
-	// Graphical illustration of the box:
+	// Graphical illustration of the dust storage box:
 	vec2 box0=box_tip;
 	vec2 box1=dump_tip;
 	float Rprogress=((robot.sensor.Rcount-box_raise_min)/float(box_raise_max-box_raise_min));
@@ -233,9 +238,9 @@ void robot_display_setup(const robot_current &robot) {
 	glColor4f(0.8,0.8,0.2,1.0);
 	glBegin(GL_TRIANGLE_FAN);
 	glVertex2fv(box);
-	glVertex2fv(box+rotate(vec2(10,0),dump_angle));
-	glVertex2fv(box+rotate(vec2(10,30),dump_angle));
-	glVertex2fv(box+rotate(vec2(0,30),dump_angle));
+	glVertex2fv(box+rotate(vec2(-10,0),dump_angle));
+	glVertex2fv(box+rotate(vec2(-10,20),dump_angle));
+	glVertex2fv(box+rotate(vec2(0,20),dump_angle));
 	glEnd();
 
 // Draw the current autonomy state
@@ -334,8 +339,8 @@ void robot_display_setup(const robot_current &robot) {
 		robotPrintln("  bucket %.1f%% (%d) up",
 			(robot.sensor.bucket-179.0)*100.0/(920-179.0),robot.sensor.bucket);
 
-		robotPrintln("  battery %.2f V (%d)",
-			robot.sensor.battery*AD_DN2high_voltage,robot.sensor.battery);
+		//robotPrintln("  battery %.2f V (%d)",
+		//	robot.sensor.battery*AD_DN2high_voltage,robot.sensor.battery);
 
 		robotPrintln("  MCU latency %d",
 			robot.sensor.latency);
