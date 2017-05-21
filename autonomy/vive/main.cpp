@@ -259,9 +259,8 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
       // Angular sweep speed check:
       //   predicted = geometric predicted angles
       //   sensed = observed angles
-        
-        float predicted_min=1000.0; float predicted_max=-1000.0; 
-        float sensed_min=1000.0;  float sensed_max=-1000.0;
+        float all_predicted[SENSORS_PER_OBJECT];
+        float all_sensed[SENSORS_PER_OBJECT];
         int n_sensed=0;
         
       // float sensor_err=0.0; int n_sensor=0;
@@ -294,11 +293,9 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
             // Angular velocity estimate:
             //    numerator is projection of sensor into LN plane
             //    denominator is distance to sensor
-            float predicted=dot(E,LN)/length(E-LP);
-            if (predicted_min>predicted) predicted_min=predicted;
-            if (predicted_max<predicted) predicted_max=predicted;
-            if (sensed_min>a) sensed_min=a;
-            if (sensed_max<a) sensed_max=a;
+            float predicted=dot(E /*-LP*/,LN)/length(E-LP);
+            all_predicted[n_sensed]=predicted;
+            all_sensed[n_sensed]=a;
             n_sensed++;
           
             vec3 correction=-err*LN;
@@ -323,24 +320,63 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
           else n_outlier++;
         }
       //if (pass==NPASS-1) if (sensor_err>0) printf("%.4f(%d)\t",sensor_err/n_sensor,n_sensor);
-        
-        if (n_sensed>2 && pass>2) 
-        { // use angular ratio as distance estimate
-          float predicted=predicted_max-predicted_min;
-          float sensed=sensed_max-sensed_min;
-          float ratio=sensed/predicted;
-          printf("  L%d A%d angular velocity: %.5f vs %.5f = %.4f \n",
-            L,A, predicted, sensed, ratio);
-          if (fabs(sensed-predicted)>0.001) {
+        #if 0
+        if (n_sensed>=2 && pass>2) 
+        { // use angular ratio as distance estimate:
+          
+          // Find mean slope: radio of expected and actual angles
+          float sum_slopes=0.0;
+          int n_slopes=0;
+          for (int i=0;i<n_sensed;i++)
+            for (int j=i+1;j<n_sensed;j++) 
+            {
+              // sensed = slope*predicted+offset;
+              float num=(all_sensed[i]-all_sensed[j]);
+              float denom=(all_predicted[i]-all_predicted[j]);
+              if (isnormal(num) && isnormal(denom) && fabs(denom)>0.0001) {
+                float slope=num/denom;
+                if (isnormal(slope)) {
+                  sum_slopes+=slope;
+                  n_slopes++;
+                }
+              }
+            }
+          if (n_slopes>=1) {
+            float slope=sum_slopes/n_slopes;
             
-            float push=1.0-ratio;
-            float limit=0.1;
-            if (push>limit) push=limit;
-            if (push<-limit) push=-limit;
-            vec3 dir=nextP-o->lighthouse_position[L];
-            nextP += (0.01*n_sensed)*push*dir;
+            // Find consensus offset:
+            float offset=0.0;
+            for (int i=0;i<n_sensed;i++) {
+              offset += all_sensed[i]-slope*all_predicted[i];
+            }
+            offset *= (1.0/n_sensed);
+            
+            // Measure mean total error
+            float err=0.0;
+            for (int i=0;i<n_sensed;i++) {
+              err += fabs(slope*all_predicted[i]+offset-all_sensed[i]);
+            }
+            err*=(1.0/n_sensed);
+            
+            
+            printf("  L%d A%d angular model = *%.4f + %.4f   (err %.5f)\n",
+              L,A, slope, offset, err);
+            for (int i=0;i<n_sensed;i++) 
+                printf("  pred = %.4f    sensed = %.4f\n",
+                  all_predicted[i]+offset, all_sensed[i]);
+            if (fabs(err)<0.002) 
+            {
+              
+              float push=1.0-fabs(slope);
+              float limit=0.1;
+              if (push>limit) push=limit;
+              if (push<-limit) push=-limit;
+              vec3 dir=nextP-o->lighthouse_position[L];
+              nextP += (0.01*n_sensed)*push*dir;
+            }
           }
         }
+        #endif
     }
     //if (pass==NPASS-1) printf("\n");
     vec3 motion=sum_motion*(1.0/n_motion);
@@ -353,7 +389,7 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
     survive_vec3_print("    motion: ",motion);
     survive_vec3_print("                     torque: ",torque);
     
-    if (pass>0 && n_motion>0) { //  && n_lighthouse[0]>2 && n_lighthouse[1]>2) {
+    if (pass>0 && n_motion>0 && (n_lighthouse[0]>1 || n_lighthouse[1]>1) ) {
       // Apply position offset:
       float strength=0.03*n_motion;
       const float max_strength=0.5;
@@ -408,7 +444,7 @@ void survive_sim_integrate(SurviveObjectSimulation *o) {
       //   and it's wrong if our position is wrong.
       survive_orient_nudge(&o->orient,
         to_LH,o->lighthouse_position[L]-o->position, 
-        dt*0.4);
+        dt*0.5);
     }
   }
   
