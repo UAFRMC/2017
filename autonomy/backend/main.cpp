@@ -205,8 +205,6 @@ private:
 		power_full_fw=127, // forward
 		power_stop=64,
 		power_full_bw=1, // backward
-		power_seek_hook_fast=64+25, // seek to hooks (fast)
-		power_seek_hook_slow=64+10, // seek to hooks (slow)
 	};
 
 	// Dump bucket encoder target a/d values
@@ -342,13 +340,6 @@ bool is_stalled(const robot_current &robot) {
 	return robot.sensor.Mstall;
 }
 
-// Return true if onboard storage is full of material
-bool storage_bin_full(const robot_current &robot) {
-	// if (robot.sensor.bucketFull&(1<<4)) return true; // up to level of sensor (FIXME: filter transients)
-	return false; // not full
-}
-
-
 
 /* Utility function: slow down speed as cur approaches target
   Returns false if already past target.
@@ -475,7 +466,7 @@ void robot_manager_t::autonomous_state()
 	else if (robot.state==state_drive_to_mine)
 	{
 		if (drive_posture()) {
-			// if(robot.sensor.bucket <= head_mine_drive+40) // start mining + 40 to avoid dragging head on ground?  (but mining outside mining area is a mission-ending offence!)
+			
 			double target_Y=field_y_mine_zone+20; // mining area distance (plus buffer)
 			double err_Y=target_Y-robot_distance;
 			robot.power.left=power_drive_fw;
@@ -518,10 +509,8 @@ void robot_manager_t::autonomous_state()
 		double mine_duration=12.0;
 		if(	big_field || (
 			robot_distance<field_y_size-50 && // field left to mine
-			mine_time<mine_duration &&  // time left to mine
-			!storage_bin_full(robot) ))  // and there's room in the bin
+			mine_time<mine_duration)) // and there's room in the bin
 		{ // keep mining
-			// check_angle(); // bad if camera is a liar
 
 			if (robot.sensor.bucket<head_mine_start && (fmod(mine_time,2.0)<0.3)) {
 			// ready to mine: slowly creep forward (with PID)
@@ -529,13 +518,7 @@ void robot_manager_t::autonomous_state()
 				robot.power.right=64+35;
 			}
 
-#if 0 // open-loop stall free version
-			robot.power.dump=power_full_bw; // lower bucket hard
-#else  // Software stall detection:
-			//robot.power.dump=64-10; // gently lower bucket (take deeper bite)
-
 			if(robot.sensor.Mstall) { enter_state(state_mine_stall);}
-#endif
 		}
 		else { enter_state(state_mine_raise);} // done mining
 		}
@@ -545,7 +528,6 @@ void robot_manager_t::autonomous_state()
 	else if (robot.state==state_mine_stall)
 	{
 		tryMineMode(); // Start PID based mining
-		// robot.power.mine=power_full_fw; // keep running mining head (so stall detection works)
 		if(robot.sensor.Mstall && robot.sensor.bucket<head_mine_start)
 		{
 			robot.power.dump=power_full_fw; // raise bucket
@@ -579,7 +561,6 @@ void robot_manager_t::autonomous_state()
 	//Semiauto dump mode entry point: dock and dump mode
 	else if (robot.state==state_dump_contact) // final backup to Lunarbin
 	{
-		// robot.power.dump=power_full_fw; // lift head?  (fights drive posture)
 		if (back_up() || time_in_state>30.0)
 		{
 		  enter_state(state_dump_raise);
@@ -740,8 +721,8 @@ void robot_manager_t::update(void) {
 			robot.loc.angle=bin.angle;
 			robot.loc.confidence=std::max(robot.loc.confidence+0.2,0.0);
 		}
-		*/
-/*
+
+
 		static uint32_t last_vidcap=-1;
 		if (bin.vidcap_count!=last_vidcap) {
 			robotPrintln("Reading updated vidcap texture");
@@ -750,8 +731,8 @@ void robot_manager_t::update(void) {
 				0,video_texture_ID,
 				SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
 			last_vidcap=bin.vidcap_count;
-		}*/
-	//}
+		}
+	//}*/
 
 // Check for a command broadcast (briefly)
 	int n;
@@ -918,17 +899,6 @@ void robot_manager_t::update(void) {
 		}
 	}
 	sim.simulate(robot.power,dt);
-
-/*
-	if (big_field) { // overwrite position with 0,0,0 (for semi-auto operation)
-		robot.loc.x=0.0;
-		robot.loc.y=0.6; // upfield
-		robot.loc.z=0.0;
-		robot.loc.angle=0;
-		robot.loc.confidence=1.0;
-		sim.loc=robot.loc;
-	}
-*/
 
 	robot_display(sim.loc,0.5);
 
