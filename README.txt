@@ -10,6 +10,10 @@ Ask Mike or Dr. Lawlor to get write access!
 
 
 
+2017 Competition
+KSCCOMM-GUEST wifi: 1632061632051282171927740A
+
+
 
 
 ------------- 2015 notes:
