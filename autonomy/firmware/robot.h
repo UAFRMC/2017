@@ -71,10 +71,7 @@ typedef enum {
 	state_autonomy, ///< full autonomy start state
 	state_raise, ///< raise conveyor before driving
 	state_find_camera, ///< turn until camera is visible
-	state_align_turnout, ///< autonomous: pivot to face start position
-	state_align_drive, ///< autonomous: initial drive to start position
-	state_align_turnin, ///< autonomous: turn to face lunabin
-	state_align_back, ///< autonomous: drive back to contact lunabin
+	state_align_drive, ///< view the obstacle field
 
 	state_drive_to_mine, ///< autonomous: drive to mining area
 

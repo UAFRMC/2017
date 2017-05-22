@@ -110,6 +110,9 @@ public:
 
     // Library-internal interface: vector and GRIDA angle
     fposition(const vec2 &v_,float a_) :v(v_), a(a_) {  }
+    
+    // From gridposition:
+    fposition(const gridposition &g) :v(g.x,g.y), a(g.a) {  }
 
     // External interface: x,y, and degrees
     fposition(float x,float y,float deg_) :v(x,y) { set_degrees(deg_); }
@@ -445,13 +448,16 @@ public:
           double distance=1.01*GRIDSIZE/std::max(fabs(drivedir.x),fabs(drivedir.y)); 
           
           double cost=cur.cost+distance;
-          fposition next(cur.pos.v+distance*drive*drivedir,cur.pos.a);
+          vec2 nextpos=cur.pos.v+distance*drive*drivedir;
+          fposition next(nextpos,cur.pos.a);
           add_search(cost,drive_t(drive,0.0f),next,&cur);
-        }
-        for (float turn=-1.0;turn<=+1.0;turn+=2.0) {
-          double cost=cur.cost+GRIDSIZE*TURN_COST_TO_GRID_COST;
-          fposition next(cur.pos.v,fmodplus(cur.pos.a+turn,GRIDA)); // angles wrap around
-          add_search(cost,drive_t(0.0f,turn),next,&cur);
+          
+          for (float turn=-1.0;turn<=+1.0;turn+=2.0) {
+            int newa=fmodplus(cur.pos.a+turn,GRIDA);
+            double cost2=cost+GRIDSIZE*TURN_COST_TO_GRID_COST;
+            fposition next(cur.pos.v+distance*drive*nav.slice[newa].drive,newa); // angles wrap around
+            add_search(cost2,drive_t(drive,turn),next,&cur);
+          }
         }
       }
       

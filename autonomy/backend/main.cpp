@@ -41,8 +41,16 @@
 using osl::quadric;
 
 bool simulate_only=false; // -sim flag
+bool autopilot=true; // -autopilot flag
 bool nodrive=false; // -nodrive flag (for testing indoors)
 bool big_field=false; // -big flag
+
+vec2 autopilot_target=vec2(0.0,0.0); // field coordinates target location
+vec2 autopilot_power=vec2(0.0,0.0); // left & right track powers
+
+/** X,Y field target location where we drive to, before finally backing up */
+vec2 dump_drive_loc(0,140);
+
 
 /* Convert this unsigned char difference into a float difference */
 float fix_wrap256(unsigned char diff) {
@@ -163,6 +171,7 @@ public:
     // Add a few random obstacles to show off path planning
     for (int x=200;x<250;x++)
       navigator.mark_obstacle(x,300,30);
+
 	}
 
 	// Do robot work.
@@ -230,7 +239,7 @@ private:
 	// Set the front wheels and bucket to natural driving posture
 	//  Return true if we're safe to drive
 	bool drive_posture() {
-		int tolerance=10; // dead zone (to prevent hunting)
+		int tolerance=50; // dead zone (to prevent hunting)
 		if (robot.sensor.bucket<head_mine_drive-tolerance)
 		{
 			robot.power.dump=power_full_fw; // raise
@@ -245,23 +254,29 @@ private:
 
 	// Autonomous driving rate:
 	//  Returns 0-1.0 float power value.
-	float drive_speed(float forward,float turn=0.0) {
-		return 0.8; // confident but conservative
+	float drive_speed(void) {
+		return 0.2; // confident but conservative
 	}
 
 	// Autonomous feeler-based backing up: drive backward slowly until both switches engage.
 	//  Return true when we're finally backed up properly.
 	bool back_up()
 	{
-		if (sim.loc.y>55) { // keep driving toward the bin
-			autonomous_drive(vec2(0.0,-1.0));
+		if (sim.loc.y>60) { // keep driving toward the bin
+			
+			autonomous_drive(vec2(0.0,40.0));
+			
+			return false;
+		}
+		else if (sim.loc.y>40) {
+			robot.power.left=robot.power.right=64-(0.1*63);
 			return false;
 		}
 		else
 			return true; // we're there!
 
-		// const int back_slow=64-(drive_speed(-1.0)*64);
-		// const int back_slow=64-(0.35*64); // faster back-up (hack!)
+		// const int back_slow=64-(drive_speed()*63);
+		// const int back_slow=64-(0.35*63); // faster back-up (hack!)
 		if(!(drive_posture())) {return false;}
 		else {
 			// FIXME: back-up sensors?
@@ -275,65 +290,17 @@ private:
 	bool autonomous_drive(vec2 target) {
 		if (!drive_posture()) return false; // don't drive yet
 
-		double drive_power=drive_speed(+1.0);
+		autopilot_target=target;
+		robot.power.left=64+63*drive_speed()*autopilot_power.x;
+		robot.power.right=64+63*drive_speed()*autopilot_power.y;
+		
 		vec2 cur(sim.loc.x,sim.loc.y); // robot location
-		double angle=sim.loc.angle; // degrees (!?)
-		double arad=angle*M_PI/180.0; // radians
-		vec2 orient(sin(arad),cos(arad)); // orientation vector (forward vector of robot)
-		vec2 should=normalize(cur-target); // we should be facing this way
 
-		double turn=orient.x*should.y-orient.y*should.x; // cross product (sin of angle)
-		double drive=dot(orient,should); // dot product (like distance)
-
-		double t=limit(turn*0.5,drive_power);
-		double d=limit(drive*0.3,drive_power);
-		double L=-d-t;
-		double R=-d+t;
-		robot.power.left=64+63*limit(L,0.5);
-		robot.power.right=64+63*limit(R,0.5);
-
-		return length(cur-target)<20.0; // we're basically there
+		return length(cur-target)<30.0; // we're basically there
 	}
 
-	// Force this angle (or angle difference) to be between -180 and +180,
-	//   by adding or subtracting 360 degrees.
-	void reduce_angle(double &angle) {
-		while (angle>=180) angle-=360; // reduce
-		while (angle<-180) angle+=360; // reduce
-	}
-
-	// Autonomous turning: rotate robot so it's facing this direction.
-	//  Returns true once we're basically at the target angle.
-	bool autonomous_turn(double angle_target_deg=0.0,bool do_posture=true)
-	{
-		if (do_posture) { if (!drive_posture()) return false; } // don't drive yet
-		double angle_err_deg=sim.loc.angle-angle_target_deg;
-		reduce_angle(angle_err_deg);
-		robotPrintln("Autonomous turn to %.0f from %.0f deg\n",
-			angle_target_deg, sim.loc.angle);
-
-		double turn=angle_err_deg*0.1; // proportional control
-		double maxturn=drive_speed(0.0,1.0);
-		turn=limit(turn,maxturn);
-		robot.power.left=64-63*turn;
-		robot.power.right=64+63*turn;
-		return fabs(angle_err_deg)<5.0; // angle error tolerance
-	}
-
-	// Make sure we're still facing the collection bin.  If not, pivot to face it.
-	bool check_angle() {
-		if (robot.loc.confidence<0.2) return true; // we don't know where we are--just keep driving?
-		double target=180.0/M_PI*atan2(robot.loc.x,robot.loc.y+200.0);
-		double err=sim.loc.angle-target;
-		robotPrintln("check_angle: cur %.1f deg, target %.1f deg",sim.loc.angle,target);
-		reduce_angle(err);
-		if (fabs(err)<10.0) return true; // keep driving--straight enough
-		else return autonomous_turn(target,false); // turn to face target
-	}
 };
 
-/** X,Y field target location where we drive to, before finally backing up */
-vec2 dump_drive_loc(0,100);
 
 // Return true if the mining head is stalled (according to our sensors
 bool is_stalled(const robot_current &robot) {
@@ -361,9 +328,9 @@ void robot_manager_t::autonomous_state()
 	robot.power.stop(); // each state starts from scratch
 
 // Drive constants
-	float power_drive_float=drive_speed(1.0); // autonomous drive speed: 0.2 for concrete, 0.3 for dust (careful), 0.35 for fast autonomy
+	float power_drive_float=drive_speed(); // autonomous drive speed: 0.2 for concrete, 0.3 for dust (careful), 0.35 for fast autonomy
 	int power_drive_fw=(int)(64+power_drive_float*63); // driving speed
-	int power_stuck_fw=(int)(64+0.45*63); // un-stuck speed
+	// int power_stuck_fw=(int)(64+0.45*63); // un-stuck speed
 	int power_drive_bw=(int)(64-power_drive_float*63);
 
 	//float robot_distance=sqrt(robot.loc.x*robot.loc.x+robot.loc.y*robot.loc.y);
@@ -394,8 +361,8 @@ void robot_manager_t::autonomous_state()
 		if (!drive_posture()) { /* correct posture first */ }
 		else if (robot.loc.confidence>0.5) { // we know where we are!
 			sim.loc=robot.loc; // reset simulator to real detected values
-
-			enter_state(state_align_turnout);
+			
+			enter_state(state_align_drive);
 		}
 		else // don't know where we are yet--turn left
 		{
@@ -420,65 +387,25 @@ void robot_manager_t::autonomous_state()
 			}
 		}
 	}
-
-	///< autonomous: rotate to face turning spot
-	else if (robot.state==state_align_turnout) {
-		double target_angle=-80.0; // degrees from Lunabin center
-		if (sim.loc.x>0) target_angle=-target_angle; // right side? turn left.
-		if (autonomous_turn(target_angle) || time_in_state>20.0) {
-			enter_state(state_align_drive);
-		}
-	}
-
-	///< autonomous: initial drive to line up with centerline
-	else if (robot.state==state_align_drive) {
-		bool x_aligned=fabs(sim.loc.x)<20.0; // on centerline
-		if (!drive_posture()) { /* correct posture first */ }
-		else if (x_aligned || time_in_state>20.0) { // done!
-			enter_state(state_align_turnin);
-		}
-		else { // drive backward to turn area (stop if we hit wall)
-			vec2 target(100.0,100.0);
-			if (sim.loc.x>0.0) target.x*=-1.0; // flip target around
-			if (autonomous_drive(target)) enter_state(state_drive_to_mine);
-		}
-	}
-
-	///< autonomous: rotate to face directly toward bin center
-	else if (robot.state==state_align_turnin) {
-		double target=0.0; // 180.0/M_PI*atan2(sim.loc.x,sim.loc.y);
-		if (autonomous_turn(target) || time_in_state>20.0) {
-			enter_state(state_drive_to_mine);
-		}
-	}
-
-	///< autonomous: drive backwards to contact lunabin for initial orientation
-	///  DISABLED STATE in 2015 version
-	else if (robot.state==state_align_back) {
-		if (back_up() || time_in_state>30.0)
-		{
-			enter_state(state_drive_to_mine);
+	//state_align_drive: Get a view of the obstacle field
+	else if (robot.state==state_align_drive)
+	{
+		if (drive_posture()) {
+			
+			if (autonomous_drive(vec2(0.0,130)) || (fabs(robot.loc.x)<15.0 && fabs(robot.loc.angle)<10.0))  // we're there now
+			{
+				enter_state(state_drive_to_mine); // start driving
+			}
 		}
 	}
 
 	//state_drive_to_mine: Drive to mining area
-	//TODO:Currently proportional drive. We can go high power to avoid obstacles
 	else if (robot.state==state_drive_to_mine)
 	{
 		if (drive_posture()) {
-			
-			double target_Y=field_y_mine_zone+20; // mining area distance (plus buffer)
-			double err_Y=target_Y-robot_distance;
-			robot.power.left=power_drive_fw;
-			robot.power.right=power_drive_fw;
-			if (err_Y<0.0)  // we're there now
+			if (autonomous_drive(vec2(0.0,field_y_mine_zone+100)) || (robot.loc.y>field_y_mine_zone+10 && fabs(robot.loc.angle)<20.0))  // we're there now
 			{
 				enter_state(state_mine_lower); // start mining!
-			}
-			check_angle();
-
-			if (time_in_state>20.0) { // stuck?  high power mode!
-				robot.power.left=robot.power.right=power_stuck_fw;
 			}
 		}
 	}
@@ -508,14 +435,14 @@ void robot_manager_t::autonomous_state()
 		double mine_time=cur_time-mine_start_time;
 		double mine_duration=12.0;
 		if(	big_field || (
-			robot_distance<field_y_size-50 && // field left to mine
+			robot_distance<field_y_size-75 && // field left to mine
 			mine_time<mine_duration)) // and there's room in the bin
 		{ // keep mining
 
-			if (robot.sensor.bucket<head_mine_start && (fmod(mine_time,2.0)<0.3)) {
-			// ready to mine: slowly creep forward (with PID)
-				robot.power.left=64+35;
-				robot.power.right=64+35;
+			if (robot.sensor.bucket<head_mine_start) //  && (fmod(mine_time,2.0)<0.3)) 
+			{ // ready to mine: slowly creep forward (with PID)
+				robot.power.left=64+4;
+				robot.power.right=64+4;
 			}
 
 			if(robot.sensor.Mstall) { enter_state(state_mine_stall);}
@@ -552,9 +479,7 @@ void robot_manager_t::autonomous_state()
 	// Drive back to bin
 	else if (robot.state==state_drive_to_dump)
 	{
-		autonomous_drive(dump_drive_loc);
-
-		if (sim.loc.y<150) { enter_state(state_dump_contact);}
+		if (autonomous_drive(dump_drive_loc)) { enter_state(state_dump_contact);}
 	}
 
 
@@ -874,8 +799,10 @@ void robot_manager_t::update(void) {
 	robot_display(robot.loc);
 
 	static double last_time=0.0;
-	double dt=cur_time-last_time;
-	if (dt>0.1) dt=0.1;
+	double time_zoom=1.0;
+	if (simulate_only) time_zoom=10.0;
+	double dt=time_zoom*(cur_time-last_time);
+	if (dt>0.1*time_zoom) dt=0.1*time_zoom;
 	last_time=cur_time;
 
 	if (robot.loc.confidence>0.5)  // make sim track reality
@@ -889,6 +816,7 @@ void robot_manager_t::update(void) {
 			robot.loc.confidence*=0.9;
 		robot.loc.confidence*=0.9;
 
+/*
 		if (robot.loc.y>100 && robot.loc.y<500) { // simulate obstacles
 		if ((rand()%1000)==0) { // crater!
 			sim.loc.angle+=30.0;
@@ -897,35 +825,52 @@ void robot_manager_t::update(void) {
 			sim.loc.angle-=30.0;
 		}
 		}
+*/
 	}
 	sim.simulate(robot.power,dt);
 
 	robot_display(sim.loc,0.5);
 
 // Show path planning
-  if (simulate_only) { //<- fixme: move path planning to dedicated thread, to avoid blocking
+  if (autopilot) { //<- fixme: move path planning to dedicated thread, to avoid blocking?
     // Show path back to dump
     vec2 shift(field_x_size/2.0,0.0);
-    vec2 target(0,40);
-    if (robot.state>=state_align_turnout && robot.state<state_drive_to_dump)
-      target=vec2(0.0,field_y_size-100); // target is mining area
 
     // Start position: robot's position
     rmc_navigator::fposition fstart(robot.loc.x+shift.x,robot.loc.y+shift.y,90-robot.loc.angle);
+
     // End position: at target
-    rmc_navigator::fposition ftarget(target.x+shift.x,target.y+shift.y,90);
+    rmc_navigator::fposition ftarget(autopilot_target.x+shift.x,autopilot_target.y+shift.y,90);
 
     rmc_navigator::planner plan(navigator.navigator,fstart,ftarget,false);
-    glBegin(GL_LINE_STRIP);
-    for (const rmc_navigator::searchposition &p : plan.path)
-    {
-      //std::cout<<"Plan position: "<<p.pos<<" drive "<<p.drive<<"\n";
-      glColor3f(0.5f+0.5f*p.drive.forward,0.5f+0.5f*p.drive.turn,0.0f);
-      vec2 v=p.pos.v-shift;
-      glVertex2fv(v);
-    }
-    glEnd();
 
+    enum {smoothplan=3};
+    vec2 last_plan=autopilot_power;
+    float plan_smoothing=0.1;
+    if (last_plan.x<0.0 && last_plan.y<0.0) plan_smoothing*=5.0; // reduce hunting
+    autopilot_power=(1.0-plan_smoothing)*last_plan;
+    if (plan.path.size()>=smoothplan) {
+	    for (int s=0;s<smoothplan;s++) {
+		    float f=plan.path[s].drive.forward;
+		    float t=plan.path[s].drive.turn;
+		    autopilot_power.x+=(f-t)*(plan_smoothing/smoothplan);
+		    autopilot_power.y+=(f+t)*(plan_smoothing/smoothplan);
+	    }
+	
+	    glBegin(GL_LINE_STRIP);
+	    for (const rmc_navigator::searchposition &p : plan.path)
+	    {
+		    //std::cout<<"Plan position: "<<p.pos<<" drive "<<p.drive<<"\n";
+		    glColor3f(0.5f+0.5f*p.drive.forward,0.5f+0.5f*p.drive.turn,0.0f);
+		    vec2 v=p.pos.v-shift;
+		    glVertex2fv(v);
+	    }
+	    glEnd();
+    }
+    if (length(autopilot_power)<0.01) { // no plan available--drive randomly (!)
+      robotPrintln("DRIVING RANDOMLY");
+      autopilot_power=0.5*normalize(vec2((rand()%8)*(1.0/8.0)-0.5,(rand()%8)*(1.0/8.0)-0.5));
+    }
 
   }
 }
@@ -938,15 +883,17 @@ void display(void) {
 
 	glTranslatef(field_x_GUI+550.0,100.0,0.0);
 	glScalef(300.0,200.0,1.0);
-	glBindTexture(GL_TEXTURE_2D,video_texture_ID);
-	glEnable(GL_TEXTURE_2D);
-	glBegin(GL_QUAD_STRIP);
-	glTexCoord2f(0.0,0.0); glVertex2f(0.0,0.0);
-	glTexCoord2f(1.0,0.0); glVertex2f(+1.0,0.0);
-	glTexCoord2f(0.0,1.0); glVertex2f(0.0,+1.0);
-	glTexCoord2f(1.0,1.0); glVertex2f(+1.0,+1.0);
-	glEnd();
-	glBindTexture(GL_TEXTURE_2D,0);
+	if (video_texture_ID) {
+		glBindTexture(GL_TEXTURE_2D,video_texture_ID);
+		glEnable(GL_TEXTURE_2D);
+		glBegin(GL_QUAD_STRIP);
+		glTexCoord2f(0.0,0.0); glVertex2f(0.0,0.0);
+		glTexCoord2f(1.0,0.0); glVertex2f(+1.0,0.0);
+		glTexCoord2f(0.0,1.0); glVertex2f(0.0,+1.0);
+		glTexCoord2f(1.0,1.0); glVertex2f(+1.0,+1.0);
+		glEnd();
+		glBindTexture(GL_TEXTURE_2D,0);
+	}
 
 	glutSwapBuffers();
 	glutPostRedisplay();
@@ -970,6 +917,12 @@ int main(int argc,char *argv[])
 		}
 		else if (0==strcmp(argv[argi],"-nodrive")) {
 			nodrive=true;
+		}
+		else if (0==strcmp(argv[argi],"-autopilot")) {
+			autopilot=true;
+		}
+		else if (0==strcmp(argv[argi],"-noautopilot")) {
+			autopilot=false;
 		}
 		else if (2==sscanf(argv[argi],"%dx%d",&w,&h)) {}
 		else printf("Unrecognized argument '%s'!\n",argv[argi]);
