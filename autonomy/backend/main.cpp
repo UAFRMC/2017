@@ -94,6 +94,23 @@ public:
 		return false;
 	}
 
+	void update_vive(const osl::transform &robot_tf)
+	{
+		robot_localization loc;
+		loc.x=robot_tf.origin.x-field_x_hsize; // make bin the origin
+		loc.y=robot_tf.origin.y;
+		loc.z=robot_tf.origin.z;
+
+		loc.angle=(180.0/M_PI)*atan2(robot_tf.basis.x.x,robot_tf.basis.x.y);
+		loc.pitch=(180.0/M_PI)*robot_tf.basis.x.z;
+		
+		loc.confidence=std::max(0.5-0.1*loc.y/100.0,0.1);
+		if (loc.y<-50 || loc.y>850 || fabs(loc.x)>250) loc.confidence=0.01;
+		
+		blend(merged,loc,loc.confidence);
+		printf("Vive confidence: %.2f\n",loc.confidence);
+		merged.confidence=(merged.confidence+loc.confidence)*0.9;
+	}
 
 	/* Update absolute robot position based on these incremental
 	   wheel encoder distances.
@@ -609,12 +626,7 @@ void robot_manager_t::update(void) {
 	static osl::transform robot_tf;
 	static file_ipc_link<osl::transform> robot_tf_link("robot.tf");
 	if (robot_tf_link.subscribe(robot_tf)) {
-	  robot.loc.x=robot_tf.origin.x-field_x_hsize; // make bin the origin
-	  robot.loc.y=robot_tf.origin.y;
-	  robot.loc.z=robot_tf.origin.z;
-	  
-	  robot.loc.angle=(180.0/M_PI)*atan2(robot_tf.basis.x.x,robot_tf.basis.x.y);
-	  robot.loc.pitch=(180.0/M_PI)*robot_tf.basis.x.z;
+          locator.update_vive(robot_tf);
 	}
   
 
@@ -622,7 +634,6 @@ void robot_manager_t::update(void) {
 /*
 // Check for an updated location from the "camera" vision application
 	if (locator.update_vision("../aruco/viewer/marker.bin")) {
-  	robot.loc=locator.merged; // copy out robot location
 
 //		robotPrintln("Location: X %.1f   Y %.1f   angle %.0f  (%s)",
 //			bin.x,bin.y,bin.angle,bin.valid?"valid":"invalid");
@@ -658,6 +669,7 @@ void robot_manager_t::update(void) {
 			last_vidcap=bin.vidcap_count;
 		}
 	//}*/
+        robot.loc=locator.merged;
 
 // Check for a command broadcast (briefly)
 	int n;
