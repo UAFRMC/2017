@@ -18,6 +18,8 @@
 #include "aurora/ui.h"
 #include "aurora/robot_serial.h"
 
+#include "bitgrid_RMC.h"
+
 #include <SOIL/SOIL.h>
 
 #include "ogl/event.cpp"
@@ -44,6 +46,7 @@ bool simulate_only=false; // -sim flag
 bool autopilot=true; // -autopilot flag
 bool nodrive=false; // -nodrive flag (for testing indoors)
 bool big_field=false; // -big flag
+bool kinect=false; // -kinect navigation flag
 
 vec2 autopilot_target=vec2(0.0,0.0); // field coordinates target location
 vec2 autopilot_power=vec2(0.0,0.0); // left & right track powers
@@ -185,9 +188,11 @@ public:
 		sim.loc.angle=(rand()%6)*60;
 		sim.loc.confidence=1.0;
 
-    // Add a few random obstacles to show off path planning
-    for (int x=200;x<250;x++)
-      navigator.mark_obstacle(x,300,30);
+		if (!kinect) {
+		    // Add a few random obstacles to show off path planning
+		    for (int x=200;x<250;x++)
+		      navigator.mark_obstacle(x,300,30);
+		}
 
 	}
 
@@ -845,6 +850,43 @@ void robot_manager_t::update(void) {
 
 // Show path planning
   if (autopilot) { //<- fixme: move path planning to dedicated thread, to avoid blocking?
+    static bitgrid last_srd,last_obs;
+    if (kinect) { // grab latest kinect obstacles
+        static file_ipc_link<bitgrid> srd_link("straddle.grid");
+        static file_ipc_link<bitgrid> obs_link("obstacle.grid");
+        bitgrid srd,obs;
+        enum {GRIDSIZE=bitgrid::nav::GRIDSIZE};
+	bool updated=false;
+	updated |= srd_link.subscribe(srd);
+	updated |= obs_link.subscribe(obs);
+	if (updated)
+        for (int y=0;y<bitgrid::nav::GRIDY;y++)
+        for (int x=0;x<bitgrid::nav::GRIDX;x++)
+        {
+	  float height=0;
+          if (srd.read(x,y) && !last_srd.read(x,y)) { height=10.0; last_srd.write(x,y,true); }
+          if (obs.read(x,y) && !last_obs.read(x,y)) { height=30.0; last_obs.write(x,y,true); }
+          navigator.mark_obstacle(x*GRIDSIZE,y*GRIDSIZE,height);
+        }
+
+	// Draw all detected obstacles:
+	glPointSize(5.0);
+	glBegin(GL_POINTS);
+        for (int y=0;y<bitgrid::nav::GRIDY;y++)
+        for (int x=0;x<bitgrid::nav::GRIDX;x++)
+	{
+		unsigned char r=0, g=0, b=0;
+		if (last_srd.read(x,y)) g=b=100;
+		if (last_obs.read(x,y)) r=g=b=200;
+		if (g!=0) {
+			glColor3ub(r,g,b);
+			glVertex2f(x*GRIDSIZE-field_x_hsize,y*GRIDSIZE);
+		}
+	}
+	glEnd();
+    }
+
+
     // Show path back to dump
     vec2 shift(field_x_size/2.0,0.0);
 
@@ -935,6 +977,9 @@ int main(int argc,char *argv[])
 		}
 		else if (0==strcmp(argv[argi],"-noautopilot")) {
 			autopilot=false;
+		}
+		else if (0==strcmp(argv[argi],"-kinect")) {
+			kinect=true;
 		}
 		else if (2==sscanf(argv[argi],"%dx%d",&w,&h)) {}
 		else printf("Unrecognized argument '%s'!\n",argv[argi]);
