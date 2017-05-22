@@ -844,15 +844,15 @@ void robot_manager_t::update(void) {
 
     rmc_navigator::planner plan(navigator.navigator,fstart,ftarget,false);
 
-    enum {smoothplan=3};
+    enum {smoothplan=5};
     vec2 last_plan=autopilot_power;
-    float plan_smoothing=0.1;
-    if (last_plan.x<0.0 && last_plan.y<0.0) plan_smoothing*=5.0; // reduce hunting
+    float plan_smoothing=0.2;
+    if (last_plan.x<0.0 && last_plan.y<0.0) plan_smoothing*=2.0; // bias to reduce hunting
     autopilot_power=(1.0-plan_smoothing)*last_plan;
     if (plan.path.size()>=smoothplan) {
 	    for (int s=0;s<smoothplan;s++) {
 		    float f=plan.path[s].drive.forward;
-		    float t=plan.path[s].drive.turn;
+		    float t=0.5*plan.path[s].drive.turn;
 		    autopilot_power.x+=(f-t)*(plan_smoothing/smoothplan);
 		    autopilot_power.y+=(f+t)*(plan_smoothing/smoothplan);
 	    }
@@ -869,7 +869,7 @@ void robot_manager_t::update(void) {
     }
     if (length(autopilot_power)<0.01) { // no plan available--drive randomly (!)
       robotPrintln("DRIVING RANDOMLY");
-      autopilot_power=0.5*normalize(vec2((rand()%8)*(1.0/8.0)-0.5,(rand()%8)*(1.0/8.0)-0.5));
+      autopilot_power=0.5*normalize(vec2((rand()%8)*(1.0/7.0)-0.5,(rand()%8)*(1.0/7.0)-0.5));
     }
 
   }
