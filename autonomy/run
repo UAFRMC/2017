@@ -2,7 +2,7 @@
 #  Start up robot camera and backend programs.
 
 # Kill old ones first
-killall -q backend kinect vive_robot
+./stop
 
 #Over SSH, still use local screen (to save bandwidth)
 export DISPLAY=:0 
@@ -14,6 +14,11 @@ cd `dirname $0`
 
 (cd vive; ./vive_robot > "log.vive.$now" ) &
 (cd kinect; ./kinect > "log.kinect.$now" ) &
+
+(cd ipc; ./dump_tf robot.tf  > "log.robot.$now" ) &
+(cd ipc; ./dump_grid obstacle.grid  > "log.obstacle.$now" ) &
+(cd ipc; ./dump_grid straddle.grid  > "log.straddle.$now" ) &
+
 (cd backend; ./backend > "log.backend.$now") &
 echo "Backend and camera running."
 
