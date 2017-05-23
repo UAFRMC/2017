@@ -801,7 +801,7 @@ void robot_manager_t::update(void) {
 	bool can_raise_down=true;
 
 	//Detect soft encoder limiters
-	if(robot.sensor.Rcount>=arduino.Rmax)
+	if(robot.sensor.Rcount>=box_raise_max)
 		can_raise_up=false;
 	if(robot.sensor.Rcount<=0)
 		can_raise_down=false;
@@ -834,8 +834,8 @@ void robot_manager_t::update(void) {
 		//Reset encoder offset if needed
 		if(robot.sensor.limit_top%2==0)
 		{
-			arduino.Rdiff+=arduino.Rmax-robot.sensor.Rcount;
-			robot.sensor.Rcount=arduino.Rmax;
+			arduino.Rdiff+=box_raise_max-robot.sensor.Rcount;
+			robot.sensor.Rcount=box_raise_max;
 		}
 		if(robot.sensor.limit_bottom%2==0)
 		{

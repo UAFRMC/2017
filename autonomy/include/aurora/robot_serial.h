@@ -18,13 +18,12 @@ public:
 	void connect();
 	void update(robot_current &robot);
 	uint32_t Mcountdiff, DL1diff, DR1diff, DL2diff, DR2diff;
-	const int16_t Rmax;
 	int16_t Rdiff; // Deltas for encoders
 
-	robot_serial() :pkt(Serial),Rmax(278) {
+	robot_serial() :pkt(Serial) {
 		_timeout=100; //< hack, to get connect at startup
 		Mcountdiff = DL1diff = DR1diff = DL2diff = DR2diff = 0;
-		Rdiff=Rmax/2;
+		Rdiff=box_raise_max/2;
 	}
 };
 
