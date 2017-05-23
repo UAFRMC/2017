@@ -43,7 +43,7 @@
 using osl::quadric;
 
 bool simulate_only=false; // -sim flag
-bool autopilot=true; // -autopilot flag
+bool autopilot=false; // -autopilot flag
 bool nodrive=false; // -nodrive flag (for testing indoors)
 bool big_field=false; // -big flag
 bool kinect=false; // -kinect navigation flag
@@ -848,8 +848,7 @@ void robot_manager_t::update(void) {
 
 	robot_display(sim.loc,0.5);
 
-// Show path planning
-  if (autopilot) { //<- fixme: move path planning to dedicated thread, to avoid blocking?
+
     static bitgrid last_srd,last_obs;
     if (kinect) { // grab latest kinect obstacles
         static file_ipc_link<bitgrid> srd_link("straddle.grid");
@@ -885,6 +884,9 @@ void robot_manager_t::update(void) {
 	}
 	glEnd();
     }
+
+// Show path planning
+  if (autopilot) { //<- fixme: move path planning to dedicated thread, to avoid blocking?
 
 
     // Show path back to dump
