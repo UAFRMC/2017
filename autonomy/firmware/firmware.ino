@@ -154,11 +154,12 @@ void send_motors(void)
   else
     digitalWrite(bts_enable_pin,HIGH);
  
-  int drivePower=100;
+  int drivePower=255;
+/*  int drivePower=100;
   if(robot.power.high)
   {
     drivePower=255;
-  }
+  }*/
   motor_L.max_power=drivePower;
   motor_R.max_power=drivePower;
   
@@ -171,7 +172,7 @@ void send_motors(void)
   set_direction(right1,encoder_DR2);
 
 
-  int roll = encoder_R.update(robot.power.roll,robot.power.torqueControl==0);
+  int roll = encoder_R.update(robot.power.roll,robot.power.torqueControl==0, 6);
   send_motor_power(robot.power.roll,motor_D,encoder_R);
 
   // automated mining at fixed rate

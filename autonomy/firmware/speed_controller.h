@@ -55,7 +55,7 @@ public:
 
   //target is either target pwm speed in speed control mode (when torque_control is false)
   //target is either target ms time in torque control mode (when torque_control is true)
-  int update(int target,const bool speed_control,int rpm_scaler=6)
+  int update(int target,const bool speed_control,int rpm_scaler=12)
   {
     //speed control, return
     if(!speed_control) {
