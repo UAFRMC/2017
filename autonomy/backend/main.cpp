@@ -813,10 +813,13 @@ void robot_manager_t::update(void) {
 		can_raise_down=false;
 
 	//Stop raise/lower if limit detected
-	if(robot.power.roll>64&&!can_raise_up)
-		robot.power.roll=64;
-	if(robot.power.roll<64&&!can_raise_down)
-		robot.power.roll=64;
+	if (!robot.power.torqueControl) //Override limit switches in torque control
+	{
+		if(robot.power.roll>64&&!can_raise_up)
+			robot.power.roll=64;
+		if(robot.power.roll<64&&!can_raise_down)
+			robot.power.roll=64;
+	}
 
 	// Send commands to Arduino
 	if (simulate_only) { // build fake arduino data
