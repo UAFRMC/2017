@@ -84,7 +84,7 @@ module sprocket40(teeth) {
 
 // Numbers for 3/32" bicycle chain
 module sprocketBikeWide(teeth) {
-   sprocket(teeth, 0.312*25.4, 0.5*25.4,  5/32*25.4-0.5, 0.8);
+   sprocket(teeth, 0.312*25.4, 0.5*25.4,  3.1 /* thick */, 0.8);
 }
 
 //sprocket40(8);

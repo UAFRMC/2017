@@ -3,8 +3,8 @@ $fs=0.05;
 use <barbie_gearbox.scad>;
 use <sprocketlib2D.scad>;
 
-sprocketz=3.4; // approx, see sprocketBikeWide for real value
-fillet=3; // curving blend up to sprocket
+sprocketz=3.1; // approx, see sprocketBikeWide for real value
+fillet=3+8; // curving blend up to sprocket
 h=16.0+fillet; // height over sprocket
 wiggle=0.1;
 gearbox_fatten=0.2;
