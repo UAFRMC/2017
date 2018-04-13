@@ -6,8 +6,8 @@
 include <drive_param.scad>
 include <roundlib.scad>
 
-// $fa=20; // coarse preview
-$fa=10; // fine final version
+$fa=25; // coarse preview
+$fa=25/4; // fine final version
 fa_outside=5; // angle tolerance for exterior surface is better
 
 // Circumference of sprocket:
@@ -44,6 +44,22 @@ outside_wall=2.0; // ground contact faces
 rib_rim=2.0; // thickness of outlines around ribs
 drive_outside=50+2*wall; // diameter of support ring outside gearbox
 
+
+//Crowning: slightly convex outer surface makes belt tend to re-center itself.
+//  http://www.durabelt.com/faq.php#FAQ14
+//   recommends total crown height is 1-2% of belt width
+
+crown_height=100.0*0.015; // radius change across crown (2% * track width)
+crown_maxradius=sprocket_radius; // maximum diameter
+crown_dz=crown_height/crown_maxradius; // relative diameter change
+echo(crown_dz);
+crown_relative_thick=sqrt(1-(1-crown_dz)*(1-crown_dz)); // half thickness, measured on unit circle
+crown_scale=sprockets_height/2/crown_relative_thick; // Z dimensions of crown ellipsoid
+
+module crown_sphere(inset=0.0) {
+	translate([0,0,sprockets_height/2]) scale([1,1,crown_scale/crown_maxradius]) 
+		sphere(r=crown_maxradius-inset, $fa=4, $fs=0.1);
+}
 
 
 module peg_hole_trapezoid(fatten,add_width,ht) {
@@ -166,7 +182,7 @@ tooth_dy=9; // Y coordinate of start of gear tooth
 rebar_ID=4.5;
 rebar_wall=wall;
 rebar_OD=rebar_ID+2*rebar_wall;
-rebar_dx=sprocket_radius-rebar_OD/2-0.5;
+rebar_dx=sprocket_radius-rebar_OD/2-1.5;
 rebar_dy=-tooth_dy+rebar_OD/2+3; // no overlap, center rib reinforce
 
 module rebar_array() {
@@ -237,7 +253,7 @@ module drive_profile(zshrink=0.0) {
 	difference() {
 		union() {
 			// Base
-			cylinder(r=sprocket_radius,h=sprockets_height-2*zshrink,$fa=fa_outside);
+			cylinder(r=sprocket_radius,h=sprockets_height-zshrink,$fa=fa_outside);
 			// Trim up to motor
 			translate([0,0,sprockets_height-2*zshrink-epsilon])
 				cylinder(r1=sprocket_radius,r2=drive_outside/2,h=overall_height-sprockets_height);
@@ -245,7 +261,7 @@ module drive_profile(zshrink=0.0) {
 	}
 }
 
-// Hole in middle drive sprocket
+// Big hole in middle of this sprocket
 module drive_middle_clear(fatten=0.0) {
 	rotate_extrude(convexity=2) 
 	intersection() {
@@ -257,7 +273,7 @@ module drive_middle_clear(fatten=0.0) {
 			polygon([
 				[epsilon,overall_height-20],
 				[sprocket_radius*0.7,overall_height-50],
-				[sprocket_radius*0.9,10],
+				[sprocket_radius*0.85,10],
 				[epsilon,10]
 			]);
 		}
@@ -276,14 +292,25 @@ module pegwalls(fatten=0.0) {
 			
 		}
 		// Trim donut
+		translate([0,0,-2*fatten])
 		holy_cylinder(ro=sprocket_radius+fatten,ri=sprocket_radius-hole_depth*0.8-fatten,
-			h=sprockets_height+fatten);
+			h=sprockets_height+fatten*4);
 	}
 }
 
 
 
 module drive_plus() {
+	// Thicker outside ground contact surface
+	difference() {
+		translate([0,0,sprockets_height/2])
+			cube([2*sprocket_radius,2*sprocket_radius,sprockets_height],center=true);
+		crown_sphere(1.5*outside_wall);
+	}
+	
+	// Flat bottom plate
+	cylinder(d=drive_outside,h=wall);
+	
 	// Main ribs
 	intersection() { 
 		union() { drive_ribs(); rebar(dia=rebar_OD); }
@@ -296,9 +323,15 @@ module drive_plus() {
 		difference() { drive_profile(rib_rim); drive_middle_clear(rib_rim); };
 	};
 	
+	// Miniribs to strengthen sprockets
+	translate([0,0,sprockets_height/2]) 
+		peg_hole_array() 
+			translate([0,0,sprocket_radius]) 
+				cube([sprockets_height,wall,32],center=true);
+	
 	translate([0,0,overall_height]) barbie_gearbox(wall);
 	
-	pegwalls() peg_holes(outside_wall);
+	pegwalls() peg_holes(1.5*outside_wall);
 	
 	axle_bearing(2*wall);
 }
@@ -306,10 +339,10 @@ module drive_plus() {
 module drive_minus() {
 	pegwalls(1.0) peg_holes(0.0);
 	
-	translate([0,0,overall_height]) barbie_gearbox();
+	translate([0,0,overall_height+epsilon]) barbie_gearbox();
 	
 	translate([0,0,-epsilon]) axle_bearing(0.0);
-	
+	 
 	drive_middle_clear();
 	
 	/*
@@ -323,8 +356,14 @@ module drive_minus() {
 
 module drive_final() {
 	difference() {
-		drive_plus();
+		intersection() {
+			drive_plus();
+			crown_sphere(0.0); // crown outer surface
+		}
 		drive_minus();
+		
+		// Cross section cube
+		// cube([1000,1000,1000]);
 	}
 }
 
