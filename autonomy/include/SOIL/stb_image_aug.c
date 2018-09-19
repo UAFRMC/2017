@@ -129,7 +129,6 @@ static int stbi_error(const char *str)
 #elif defined(STBI_FAILURE_USERMSG)
    #define stbi_error(x,y)  stbi_error(y)
 #else
-   #define STBI_FAILURE_FULL_STRINGS 1
    #define stbi_error(x,y)  stbi_error(x)
 #endif
 
@@ -355,6 +354,8 @@ typedef struct
 static void start_file(stbi *s, FILE *f)
 {
    s->img_file = f;
+   s->img_buffer = 0;
+   s->img_buffer_end = 0;
 }
 #endif
 
@@ -480,18 +481,18 @@ static unsigned char *convert_format(unsigned char *data, int img_n, int req_com
       // convert source image with img_n components to one with req_comp components;
       // avoid switch per pixel, so use switch per scanline and massive macros
       switch(COMBO(img_n, req_comp)) {
-         CASE(1,2) dest[0]=src[0], dest[1]=255; break;
-         CASE(1,3) dest[0]=dest[1]=dest[2]=src[0]; break;
-         CASE(1,4) dest[0]=dest[1]=dest[2]=src[0], dest[3]=255; break;
-         CASE(2,1) dest[0]=src[0]; break;
-         CASE(2,3) dest[0]=dest[1]=dest[2]=src[0]; break;
-         CASE(2,4) dest[0]=dest[1]=dest[2]=src[0], dest[3]=src[1]; break;
-         CASE(3,4) dest[0]=src[0],dest[1]=src[1],dest[2]=src[2],dest[3]=255; break;
-         CASE(3,1) dest[0]=compute_y(src[0],src[1],src[2]); break;
-         CASE(3,2) dest[0]=compute_y(src[0],src[1],src[2]), dest[1] = 255; break;
-         CASE(4,1) dest[0]=compute_y(src[0],src[1],src[2]); break;
-         CASE(4,2) dest[0]=compute_y(src[0],src[1],src[2]), dest[1] = src[3]; break;
-         CASE(4,3) dest[0]=src[0],dest[1]=src[1],dest[2]=src[2]; break;
+         CASE(1,2) { dest[0]=src[0], dest[1]=255; } break;
+         CASE(1,3) { dest[0]=dest[1]=dest[2]=src[0]; } break;
+         CASE(1,4) { dest[0]=dest[1]=dest[2]=src[0], dest[3]=255; } break;
+         CASE(2,1) { dest[0]=src[0]; } break;
+         CASE(2,3) { dest[0]=dest[1]=dest[2]=src[0]; } break;
+         CASE(2,4) { dest[0]=dest[1]=dest[2]=src[0], dest[3]=src[1]; } break;
+         CASE(3,4) { dest[0]=src[0],dest[1]=src[1],dest[2]=src[2],dest[3]=255; } break;
+         CASE(3,1) { dest[0]=compute_y(src[0],src[1],src[2]); } break;
+         CASE(3,2) { dest[0]=compute_y(src[0],src[1],src[2]), dest[1] = 255; } break;
+         CASE(4,1) { dest[0]=compute_y(src[0],src[1],src[2]); } break;
+         CASE(4,2) { dest[0]=compute_y(src[0],src[1],src[2]), dest[1] = src[3]; } break;
+         CASE(4,3) { dest[0]=src[0],dest[1]=src[1],dest[2]=src[2]; } break;
          default: assert(0);
       }
       #undef CASE
@@ -2106,13 +2107,13 @@ static int create_png_image(png *a, uint8 *raw, uint32 raw_len, int out_n)
                 for (i=s->img_x-1; i >= 1; --i, raw+=img_n,cur+=img_n,prior+=img_n) \
                    for (k=0; k < img_n; ++k)
          switch(filter) {
-            CASE(F_none)  cur[k] = raw[k]; break;
-            CASE(F_sub)   cur[k] = raw[k] + cur[k-img_n]; break;
-            CASE(F_up)    cur[k] = raw[k] + prior[k]; break;
-            CASE(F_avg)   cur[k] = raw[k] + ((prior[k] + cur[k-img_n])>>1); break;
-            CASE(F_paeth)  cur[k] = (uint8) (raw[k] + paeth(cur[k-img_n],prior[k],prior[k-img_n])); break;
-            CASE(F_avg_first)    cur[k] = raw[k] + (cur[k-img_n] >> 1); break;
-            CASE(F_paeth_first)  cur[k] = (uint8) (raw[k] + paeth(cur[k-img_n],0,0)); break;
+            CASE(F_none)  { cur[k] = raw[k]; } break;
+            CASE(F_sub)   { cur[k] = raw[k] + cur[k-img_n]; } break;
+            CASE(F_up)    { cur[k] = raw[k] + prior[k]; } break;
+            CASE(F_avg)   { cur[k] = raw[k] + ((prior[k] + cur[k-img_n])>>1); } break;
+            CASE(F_paeth)  { cur[k] = (uint8) (raw[k] + paeth(cur[k-img_n],prior[k],prior[k-img_n])); } break;
+            CASE(F_avg_first)    { cur[k] = raw[k] + (cur[k-img_n] >> 1); } break;
+            CASE(F_paeth_first)  { cur[k] = (uint8) (raw[k] + paeth(cur[k-img_n],0,0)); } break;
          }
          #undef CASE
       } else {
@@ -2122,13 +2123,13 @@ static int create_png_image(png *a, uint8 *raw, uint32 raw_len, int out_n)
                 for (i=s->img_x-1; i >= 1; --i, cur[img_n]=255,raw+=img_n,cur+=out_n,prior+=out_n) \
                    for (k=0; k < img_n; ++k)
          switch(filter) {
-            CASE(F_none)  cur[k] = raw[k]; break;
-            CASE(F_sub)   cur[k] = raw[k] + cur[k-out_n]; break;
-            CASE(F_up)    cur[k] = raw[k] + prior[k]; break;
-            CASE(F_avg)   cur[k] = raw[k] + ((prior[k] + cur[k-out_n])>>1); break;
-            CASE(F_paeth)  cur[k] = (uint8) (raw[k] + paeth(cur[k-out_n],prior[k],prior[k-out_n])); break;
-            CASE(F_avg_first)    cur[k] = raw[k] + (cur[k-out_n] >> 1); break;
-            CASE(F_paeth_first)  cur[k] = (uint8) (raw[k] + paeth(cur[k-out_n],0,0)); break;
+            CASE(F_none)  { cur[k] = raw[k]; } break;
+            CASE(F_sub)   { cur[k] = raw[k] + cur[k-out_n]; } break;
+            CASE(F_up)    { cur[k] = raw[k] + prior[k]; } break;
+            CASE(F_avg)   { cur[k] = raw[k] + ((prior[k] + cur[k-out_n])>>1); } break;
+            CASE(F_paeth)  { cur[k] = (uint8) (raw[k] + paeth(cur[k-out_n],prior[k],prior[k-out_n])); } break;
+            CASE(F_avg_first)    { cur[k] = raw[k] + (cur[k-out_n] >> 1); } break;
+            CASE(F_paeth_first)  { cur[k] = (uint8) (raw[k] + paeth(cur[k-out_n],0,0)); } break;
          }
          #undef CASE
       }
@@ -2326,7 +2327,7 @@ static int parse_png_file(png *z, int scan, int req_comp)
          default:
             // if critical, fail
             if ((c.type & (1 << 29)) == 0) {
-               #if STBI_FAILURE_FULL_STRINGS
+               #if (!defined(STBI_NO_FAILURE_STRINGS))&&(!defined(STBI_FAILURE_USERMSG))
                // not threadsafe
                static char invalid_chunk[] = "XXXX chunk not known";
                invalid_chunk[0] = (uint8) (c.type >> 24);
