@@ -264,10 +264,13 @@ public:
 	unsigned char roll:7; //Roll bag
 	unsigned char paddingRoll:1;
 
+  unsigned char head_extend:7; // Extend mining head linear
+  unsigned char padding_extend:1; 
+
 
 	robot_power() { stop(); }
 	void stop(void) {
-		left=right=mine=dump=roll=drive_stop; // all-stop
+		left=right=mine=dump=roll=head_extend=drive_stop; // all-stop
 		high=dumpMode=mineMode=torqueControl=mineHooks=mineDump=mineEncoderReset=0;
 	}
 };
